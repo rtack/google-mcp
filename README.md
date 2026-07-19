@@ -125,6 +125,7 @@ Before using this server, you need to set up Google Cloud credentials:
    - Google Forms API
    - Google Chat API
    - Google Meet REST API
+   - Photos Library API
 
 ### 2. Create OAuth 2.0 Credentials
 
