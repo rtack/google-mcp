@@ -21,6 +21,8 @@ const mockThreadsList = vi.fn();
 const mockThreadsGet = vi.fn();
 const mockThreadsTrash = vi.fn();
 const mockAttachmentsGet = vi.fn();
+const mockDraftsSend = vi.fn();
+const mockDraftsDelete = vi.fn();
 
 vi.mock("googleapis", () => ({
   google: {
@@ -47,6 +49,10 @@ vi.mock("googleapis", () => ({
           list: mockThreadsList,
           get: mockThreadsGet,
           trash: mockThreadsTrash,
+        },
+        drafts: {
+          send: mockDraftsSend,
+          delete: mockDraftsDelete,
         },
       },
     }),
@@ -294,6 +300,41 @@ describe("GmailService", () => {
       await service.trashMessage("msg1");
 
       expect(mockMessagesTrash).toHaveBeenCalledWith({ userId: "me", id: "msg1" });
+    });
+  });
+
+  describe("sendDraft", () => {
+    it("should send an existing draft by ID", async () => {
+      mockDraftsSend.mockResolvedValue({
+        data: { id: "sent1", threadId: "t1" },
+      });
+      // sendDraft calls getMessage after sending to return the full message
+      mockMessagesGet.mockResolvedValue({
+        data: {
+          id: "sent1",
+          threadId: "t1",
+          labelIds: ["SENT"],
+          payload: { headers: [{ name: "Subject", value: "Test" }] },
+        },
+      });
+
+      const result = await service.sendDraft("draft1");
+
+      expect(mockDraftsSend).toHaveBeenCalledWith({
+        userId: "me",
+        requestBody: { id: "draft1" },
+      });
+      expect(result.id).toBe("sent1");
+    });
+  });
+
+  describe("deleteDraft", () => {
+    it("should delete a draft by ID", async () => {
+      mockDraftsDelete.mockResolvedValue({ data: {} });
+
+      await service.deleteDraft("draft1");
+
+      expect(mockDraftsDelete).toHaveBeenCalledWith({ userId: "me", id: "draft1" });
     });
   });
 

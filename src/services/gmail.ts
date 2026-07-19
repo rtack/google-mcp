@@ -251,6 +251,22 @@ export class GmailService {
     });
   }
 
+  public async sendDraft(draftId: string): Promise<GmailMessage> {
+    const response = await this.gmail.users.drafts.send({
+      userId: "me",
+      requestBody: { id: draftId },
+    });
+
+    return this.getMessage(response.data.id!);
+  }
+
+  public async deleteDraft(draftId: string): Promise<void> {
+    await this.gmail.users.drafts.delete({
+      userId: "me",
+      id: draftId,
+    });
+  }
+
   public async trashMessage(messageId: string): Promise<void> {
     await this.gmail.users.messages.trash({
       userId: "me",
