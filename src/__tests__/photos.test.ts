@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Auth } from "googleapis";
+import * as fs from "fs";
 import { PhotosService } from "../services/photos.js";
+
+vi.mock("fs");
 
 describe("PhotosService", () => {
   let service: PhotosService;
@@ -16,35 +19,40 @@ describe("PhotosService", () => {
     vi.stubGlobal("fetch", vi.fn());
   });
 
+  function mockUploadAndCreateSucceed(): void {
+    const mockFetch = vi.mocked(fetch);
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve("upload-token-123"),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            newMediaItemResults: [
+              {
+                uploadToken: "upload-token-123",
+                status: { message: "Success" },
+                mediaItem: { id: "media123", productUrl: "https://photos.google.com/media123" },
+              },
+            ],
+          }),
+      } as Response);
+  }
+
   describe("uploadMediaItem", () => {
     it("should upload bytes then create the media item, returning the result", async () => {
+      mockUploadAndCreateSucceed();
       const mockFetch = vi.mocked(fetch);
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve("upload-token-123"),
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              newMediaItemResults: [
-                {
-                  uploadToken: "upload-token-123",
-                  status: { message: "Success" },
-                  mediaItem: { id: "media123", productUrl: "https://photos.google.com/media123" },
-                },
-              ],
-            }),
-        } as Response);
 
-      const result = await service.uploadMediaItem(
-        Buffer.from("fake image bytes").toString("base64"),
-        "photo.jpg",
-        "image/jpeg",
-        "album123",
-        "A test photo"
-      );
+      const result = await service.uploadMediaItem({
+        content: Buffer.from("fake image bytes").toString("base64"),
+        filename: "photo.jpg",
+        mimeType: "image/jpeg",
+        albumId: "album123",
+        description: "A test photo",
+      });
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
@@ -83,6 +91,58 @@ describe("PhotosService", () => {
       });
     });
 
+    it("should read bytes from filePath and derive the filename from its basename", async () => {
+      mockUploadAndCreateSucceed();
+      const mockFetch = vi.mocked(fetch);
+      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from("bytes from disk"));
+
+      const result = await service.uploadMediaItem({
+        filePath: "/Users/rtack/Downloads/google-mcp/gmail/scan.png",
+        mimeType: "image/png",
+      });
+
+      expect(fs.readFileSync).toHaveBeenCalledWith(
+        "/Users/rtack/Downloads/google-mcp/gmail/scan.png"
+      );
+      const [, uploadInit] = mockFetch.mock.calls[0];
+      expect((uploadInit?.headers as Record<string, string>)["X-Goog-Upload-File-Name"]).toBe(
+        "scan.png"
+      );
+      expect((uploadInit?.body as Buffer).toString()).toBe("bytes from disk");
+      expect(result.status).toBe("Success");
+    });
+
+    it("should use an explicit filename over the filePath basename when both are given", async () => {
+      mockUploadAndCreateSucceed();
+      const mockFetch = vi.mocked(fetch);
+      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from("bytes"));
+
+      await service.uploadMediaItem({
+        filePath: "/tmp/original-name.png",
+        filename: "custom-name.png",
+        mimeType: "image/png",
+      });
+
+      const [, uploadInit] = mockFetch.mock.calls[0];
+      expect((uploadInit?.headers as Record<string, string>)["X-Goog-Upload-File-Name"]).toBe(
+        "custom-name.png"
+      );
+    });
+
+    it("should throw when using content without a filename", async () => {
+      await expect(
+        service.uploadMediaItem({ content: "ZmFrZQ==", mimeType: "image/jpeg" })
+      ).rejects.toThrow("filename is required when uploading via content");
+
+      expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    });
+
+    it("should throw when neither content nor filePath is provided", async () => {
+      await expect(service.uploadMediaItem({ mimeType: "image/jpeg" })).rejects.toThrow(
+        "Either content or filePath must be provided"
+      );
+    });
+
     it("should throw when the upload-bytes step fails", async () => {
       const mockFetch = vi.mocked(fetch);
       mockFetch.mockResolvedValueOnce({
@@ -92,7 +152,7 @@ describe("PhotosService", () => {
       } as Response);
 
       await expect(
-        service.uploadMediaItem("ZmFrZQ==", "photo.jpg", "image/jpeg")
+        service.uploadMediaItem({ content: "ZmFrZQ==", filename: "photo.jpg", mimeType: "image/jpeg" })
       ).rejects.toThrow("Photos upload failed: 403 insufficient permissions");
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -112,7 +172,7 @@ describe("PhotosService", () => {
         } as Response);
 
       await expect(
-        service.uploadMediaItem("ZmFrZQ==", "photo.jpg", "image/jpeg")
+        service.uploadMediaItem({ content: "ZmFrZQ==", filename: "photo.jpg", mimeType: "image/jpeg" })
       ).rejects.toThrow("Photos mediaItems.batchCreate failed: 400 bad request");
     });
 
@@ -136,7 +196,11 @@ describe("PhotosService", () => {
             }),
         } as Response);
 
-      const result = await service.uploadMediaItem("ZmFrZQ==", "photo.jpg", "image/jpeg");
+      const result = await service.uploadMediaItem({
+        content: "ZmFrZQ==",
+        filename: "photo.jpg",
+        mimeType: "image/jpeg",
+      });
 
       expect(result.status).toBe("Failed to process the media item");
       expect(result.mediaItemId).toBeUndefined();

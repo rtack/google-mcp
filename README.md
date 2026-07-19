@@ -315,7 +315,7 @@ pass `savePath` for anything larger, up to 25 MB.
 ### Google Photos
 | Tool | Description |
 |------|-------------|
-| `photos_upload_media_item` | Upload a new photo/video, optionally into an album |
+| `photos_upload_media_item` | Upload a new photo/video from base64 content or a local filePath, optionally into an album |
 
 ### Google Docs
 | Tool | Description |
