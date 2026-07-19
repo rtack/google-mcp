@@ -59,6 +59,7 @@ Each file in `src/services/` wraps one Google API. Services take an `Auth.OAuth2
 | `people.ts` | People v1 (Contacts) |
 | `tasks.ts` | Tasks v1 |
 | `youtube.ts` | YouTube Data v3 |
+| `photos.ts` | Photos Library v1 upload — raw HTTP, no typed googleapis client exists |
 
 ### Types / Zod Schemas
 

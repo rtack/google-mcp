@@ -77,6 +77,8 @@ const SCOPES = [
   // Google Meet
   "https://www.googleapis.com/auth/meetings.space.created",
   "https://www.googleapis.com/auth/meetings.space.readonly",
+  // Google Photos
+  "https://www.googleapis.com/auth/photoslibrary.appendonly",
 ];
 
 /**
