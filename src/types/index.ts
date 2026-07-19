@@ -233,11 +233,19 @@ export const DriveSearchSchema = z.object({
   pageToken: z.string().optional(),
 });
 
-export const PhotosUploadSchema = z.object({
-  content: z.string().min(1),
-  filename: z.string().min(1),
-  mimeType: z.string().min(1),
-  albumId: z.string().optional(),
-  description: z.string().optional(),
-});
+export const PhotosUploadSchema = z
+  .object({
+    content: z.string().min(1).optional(),
+    filePath: z.string().min(1).optional(),
+    filename: z.string().min(1).optional(),
+    mimeType: z.string().min(1),
+    albumId: z.string().optional(),
+    description: z.string().optional(),
+  })
+  .refine((data) => Boolean(data.content) !== Boolean(data.filePath), {
+    message: "Provide exactly one of content or filePath, not both or neither",
+  })
+  .refine((data) => Boolean(data.filePath) || Boolean(data.filename), {
+    message: "filename is required when uploading via content",
+  });
 

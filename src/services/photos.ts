@@ -1,6 +1,17 @@
 import type { Auth } from "googleapis";
+import * as fs from "fs";
+import * as path from "path";
 
 const PHOTOS_API_BASE = "https://photoslibrary.googleapis.com/v1";
+
+export interface PhotosUploadOptions {
+  content?: string; // base64-encoded bytes; exactly one of content/filePath is required
+  filePath?: string;
+  filename?: string; // required with content; defaults to path.basename(filePath) otherwise
+  mimeType: string;
+  albumId?: string;
+  description?: string;
+}
 
 export interface PhotosUploadResult {
   mediaItemId?: string;
@@ -53,14 +64,25 @@ export class PhotosService {
     return response.text();
   }
 
-  public async uploadMediaItem(
-    content: string,
-    filename: string,
-    mimeType: string,
-    albumId?: string,
-    description?: string
-  ): Promise<PhotosUploadResult> {
-    const buffer = Buffer.from(content, "base64");
+  public async uploadMediaItem(options: PhotosUploadOptions): Promise<PhotosUploadResult> {
+    const { content, filePath, mimeType, albumId, description } = options;
+
+    let buffer: Buffer;
+    let filename: string;
+
+    if (filePath) {
+      buffer = fs.readFileSync(filePath);
+      filename = options.filename || path.basename(filePath);
+    } else if (content) {
+      if (!options.filename) {
+        throw new Error("filename is required when uploading via content");
+      }
+      buffer = Buffer.from(content, "base64");
+      filename = options.filename;
+    } else {
+      throw new Error("Either content or filePath must be provided");
+    }
+
     const uploadToken = await this.uploadBytes(buffer, filename, mimeType);
 
     const response = await fetch(`${PHOTOS_API_BASE}/mediaItems:batchCreate`, {
