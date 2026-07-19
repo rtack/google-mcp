@@ -50,7 +50,6 @@ describe("PhotosService", () => {
         content: Buffer.from("fake image bytes").toString("base64"),
         filename: "photo.jpg",
         mimeType: "image/jpeg",
-        albumId: "album123",
         description: "A test photo",
       });
 
@@ -75,7 +74,6 @@ describe("PhotosService", () => {
       expect(createUrl).toBe("https://photoslibrary.googleapis.com/v1/mediaItems:batchCreate");
       const createBody = JSON.parse(createInit?.body as string);
       expect(createBody).toEqual({
-        albumId: "album123",
         newMediaItems: [
           {
             description: "A test photo",

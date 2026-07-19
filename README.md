@@ -54,7 +54,7 @@ A comprehensive Model Context Protocol (MCP) server for Google integration, prov
 - Rename files
 
 ### Google Photos
-- Upload new photos/videos to the library, optionally into an existing album
+- Upload new photos/videos to the library
 
 ### Google Docs
 - Create new documents with optional initial content
@@ -315,7 +315,7 @@ pass `savePath` for anything larger, up to 25 MB.
 ### Google Photos
 | Tool | Description |
 |------|-------------|
-| `photos_upload_media_item` | Upload a new photo/video from base64 content or a local filePath, optionally into an album |
+| `photos_upload_media_item` | Upload a new photo/video from base64 content or a local filePath |
 
 ### Google Docs
 | Tool | Description |
