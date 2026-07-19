@@ -249,6 +249,8 @@ Tokens are stored locally and will be refreshed automatically:
 | `gmail_get_message` | Get specific email |
 | `gmail_send` | Send an email |
 | `gmail_reply` | Reply to an email |
+| `gmail_send_draft` | Send an existing draft by its draft ID |
+| `gmail_delete_draft` | Delete an existing draft by its draft ID |
 | `gmail_trash` | Move to trash |
 | `gmail_mark_read` | Mark as read |
 | `gmail_mark_unread` | Mark as unread |
