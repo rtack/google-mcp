@@ -239,7 +239,6 @@ export const PhotosUploadSchema = z
     filePath: z.string().min(1).optional(),
     filename: z.string().min(1).optional(),
     mimeType: z.string().min(1),
-    albumId: z.string().optional(),
     description: z.string().optional(),
   })
   .refine((data) => Boolean(data.content) !== Boolean(data.filePath), {

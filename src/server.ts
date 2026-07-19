@@ -358,7 +358,7 @@ export class GoogleWorkspaceMCPServer {
           {
             name: "photos_upload_media_item",
             description:
-              "Upload a new photo or video to Google Photos, optionally into an existing album. " +
+              "Upload a new photo or video to Google Photos. " +
               "Provide exactly one of content (base64) or filePath (read directly off local disk).",
             inputSchema: {
               type: "object",
@@ -381,10 +381,6 @@ export class GoogleWorkspaceMCPServer {
                 mimeType: {
                   type: "string",
                   description: "MIME type of the file, e.g. image/jpeg",
-                },
-                albumId: {
-                  type: "string",
-                  description: "ID of an existing album to add the item to (optional)",
                 },
                 description: {
                   type: "string",

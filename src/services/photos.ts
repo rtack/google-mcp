@@ -9,7 +9,6 @@ export interface PhotosUploadOptions {
   filePath?: string;
   filename?: string; // required with content; defaults to path.basename(filePath) otherwise
   mimeType: string;
-  albumId?: string;
   description?: string;
 }
 
@@ -65,7 +64,7 @@ export class PhotosService {
   }
 
   public async uploadMediaItem(options: PhotosUploadOptions): Promise<PhotosUploadResult> {
-    const { content, filePath, mimeType, albumId, description } = options;
+    const { content, filePath, mimeType, description } = options;
 
     let buffer: Buffer;
     let filename: string;
@@ -89,7 +88,6 @@ export class PhotosService {
       method: "POST",
       headers: await this.authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
-        albumId,
         newMediaItems: [
           {
             description,
