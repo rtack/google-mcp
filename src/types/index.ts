@@ -233,3 +233,11 @@ export const DriveSearchSchema = z.object({
   pageToken: z.string().optional(),
 });
 
+export const PhotosUploadSchema = z.object({
+  content: z.string().min(1),
+  filename: z.string().min(1),
+  mimeType: z.string().min(1),
+  albumId: z.string().optional(),
+  description: z.string().optional(),
+});
+

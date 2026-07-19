@@ -19,6 +19,7 @@ import { SlidesService } from "./services/slides.js";
 import { FormsService } from "./services/forms.js";
 import { ChatService } from "./services/chat.js";
 import { MeetService } from "./services/meet.js";
+import { PhotosService } from "./services/photos.js";
 import {
   DriveListOptionsSchema,
   DocCreateOptionsSchema,
@@ -37,6 +38,7 @@ import {
   DriveDeleteSchema,
   DriveCreateFolderSchema,
   DriveSearchSchema,
+  PhotosUploadSchema,
 } from "./types/index.js";
 
 export class GoogleWorkspaceMCPServer {
@@ -53,6 +55,7 @@ export class GoogleWorkspaceMCPServer {
   private forms: FormsService | null = null;
   private chat: ChatService | null = null;
   private meet: MeetService | null = null;
+  private photos: PhotosService | null = null;
 
   constructor() {
     this.server = new Server(
@@ -86,6 +89,7 @@ export class GoogleWorkspaceMCPServer {
       this.forms = new FormsService(client);
       this.chat = new ChatService(client);
       this.meet = new MeetService(client);
+      this.photos = new PhotosService(client);
     }
   }
 
@@ -347,6 +351,39 @@ export class GoogleWorkspaceMCPServer {
                 },
               },
               required: ["fileId", "newName"],
+            },
+          },
+
+          // Google Photos Tools
+          {
+            name: "photos_upload_media_item",
+            description:
+              "Upload a new photo or video to Google Photos, optionally into an existing album.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                content: {
+                  type: "string",
+                  description: "Base64-encoded file content",
+                },
+                filename: {
+                  type: "string",
+                  description: "Filename for the uploaded media item",
+                },
+                mimeType: {
+                  type: "string",
+                  description: "MIME type of the file, e.g. image/jpeg",
+                },
+                albumId: {
+                  type: "string",
+                  description: "ID of an existing album to add the item to (optional)",
+                },
+                description: {
+                  type: "string",
+                  description: "Description for the media item (optional)",
+                },
+              },
+              required: ["content", "filename", "mimeType"],
             },
           },
 
@@ -3219,6 +3256,27 @@ export class GoogleWorkspaceMCPServer {
         if (name === "drive_rename_file") {
           const { fileId, newName } = args as { fileId: string; newName: string };
           const result = await this.drive!.renameFile(fileId, newName);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        // Google Photos tools
+        if (name === "photos_upload_media_item") {
+          const { content, filename, mimeType, albumId, description } =
+            PhotosUploadSchema.parse(args);
+          const result = await this.photos!.uploadMediaItem(
+            content,
+            filename,
+            mimeType,
+            albumId,
+            description
+          );
           return {
             content: [
               {

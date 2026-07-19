@@ -51,6 +51,9 @@ A comprehensive Model Context Protocol (MCP) server for Google integration, prov
 - Create folders
 - Rename files
 
+### Google Photos
+- Upload new photos/videos to the library, optionally into an existing album
+
 ### Google Docs
 - Create new documents with optional initial content
 - Read document content
@@ -276,6 +279,11 @@ Tokens are stored locally and will be refreshed automatically:
 | `drive_move_file` | Move file to folder |
 | `drive_copy_file` | Copy a file |
 | `drive_rename_file` | Rename a file |
+
+### Google Photos
+| Tool | Description |
+|------|-------------|
+| `photos_upload_media_item` | Upload a new photo/video, optionally into an album |
 
 ### Google Docs
 | Tool | Description |
