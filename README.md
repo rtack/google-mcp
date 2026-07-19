@@ -280,7 +280,7 @@ Tokens are stored locally and will be refreshed automatically:
 ### Google Photos
 | Tool | Description |
 |------|-------------|
-| `photos_upload_media_item` | Upload a new photo/video, optionally into an album |
+| `photos_upload_media_item` | Upload a new photo/video from base64 content or a local filePath, optionally into an album |
 
 ### Google Docs
 | Tool | Description |

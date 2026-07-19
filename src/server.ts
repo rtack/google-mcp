@@ -358,17 +358,25 @@ export class GoogleWorkspaceMCPServer {
           {
             name: "photos_upload_media_item",
             description:
-              "Upload a new photo or video to Google Photos, optionally into an existing album.",
+              "Upload a new photo or video to Google Photos, optionally into an existing album. " +
+              "Provide exactly one of content (base64) or filePath (read directly off local disk).",
             inputSchema: {
               type: "object",
               properties: {
                 content: {
                   type: "string",
-                  description: "Base64-encoded file content",
+                  description:
+                    "Base64-encoded file content. Requires filename. Use filePath instead for local files - avoids inflating the request with base64.",
+                },
+                filePath: {
+                  type: "string",
+                  description:
+                    "Path to a local file to upload (e.g. a path returned by gmail_download_attachment). Filename defaults to the file's basename.",
                 },
                 filename: {
                   type: "string",
-                  description: "Filename for the uploaded media item",
+                  description:
+                    "Filename for the uploaded media item. Required with content; optional with filePath (defaults to its basename).",
                 },
                 mimeType: {
                   type: "string",
@@ -383,7 +391,7 @@ export class GoogleWorkspaceMCPServer {
                   description: "Description for the media item (optional)",
                 },
               },
-              required: ["content", "filename", "mimeType"],
+              required: ["mimeType"],
             },
           },
 
@@ -3203,15 +3211,8 @@ export class GoogleWorkspaceMCPServer {
 
         // Google Photos tools
         if (name === "photos_upload_media_item") {
-          const { content, filename, mimeType, albumId, description } =
-            PhotosUploadSchema.parse(args);
-          const result = await this.photos!.uploadMediaItem(
-            content,
-            filename,
-            mimeType,
-            albumId,
-            description
-          );
+          const options = PhotosUploadSchema.parse(args);
+          const result = await this.photos!.uploadMediaItem(options);
           return {
             content: [
               {
