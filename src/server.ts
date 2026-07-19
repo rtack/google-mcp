@@ -1605,6 +1605,34 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "gmail_send_draft",
+            description: "Send an existing draft by its draft ID.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                draftId: {
+                  type: "string",
+                  description: "The ID of the draft to send",
+                },
+              },
+              required: ["draftId"],
+            },
+          },
+          {
+            name: "gmail_delete_draft",
+            description: "Delete an existing draft by its draft ID.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                draftId: {
+                  type: "string",
+                  description: "The ID of the draft to delete",
+                },
+              },
+              required: ["draftId"],
+            },
+          },
+          {
             name: "gmail_mark_read",
             description: "Mark a message as read.",
             inputSchema: {
@@ -4268,6 +4296,22 @@ export class GoogleWorkspaceMCPServer {
           await this.requireGmail().trashMessage(messageId);
           return {
             content: [{ type: "text", text: `Message ${messageId} moved to trash.` }],
+          };
+        }
+
+        if (name === "gmail_send_draft") {
+          const { draftId } = args as { draftId: string };
+          const result = await this.gmail!.sendDraft(draftId);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        if (name === "gmail_delete_draft") {
+          const { draftId } = args as { draftId: string };
+          await this.gmail!.deleteDraft(draftId);
+          return {
+            content: [{ type: "text", text: `Draft ${draftId} deleted.` }],
           };
         }
 
