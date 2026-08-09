@@ -266,6 +266,7 @@ pass `savePath` for anything larger, up to 25 MB.
 | `calendar_create_event` | Create new event |
 | `calendar_update_event` | Update existing event |
 | `calendar_delete_event` | Delete an event |
+| `calendar_move_event` | Move an event to a different calendar, keeping its ID |
 | `calendar_quick_add` | Add event via natural language |
 | `calendar_get_freebusy` | Check availability |
 | `calendar_today` | Get today's events |
