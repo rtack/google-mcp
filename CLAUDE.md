@@ -145,10 +145,15 @@ Multiple sessions can work on this repo concurrently. To prevent one session's u
 
 ## Live-Verifying a `feat/` Branch Before an MR
 
-The live `google` MCP connection runs `local-dev`'s build, so a `feat/<name>` branch's new tools aren't callable through real MCP until they're merged — but merging is exactly what the live-verify gate has to happen *before*. Resolve that without touching the shared `local-dev`-backed connection (other sessions may depend on it):
+The live `google` MCP connection runs `local-dev`'s build, so a `feat/<name>` branch's new tools aren't callable through it until they're merged — but merging is exactly what the live-verify gate has to happen *before*. Requiring the owner to reconnect their session (registering the branch as a second MCP server, `/exit`, `claude --resume`) is not the answer — it's real work handed to them for something Claude can do unattended.
+
+**Do this instead: act as your own MCP client, no session or harness config involved at all.**
 
 1. Build the feature worktree: `pnpm build` inside its worktree directory.
-2. Register it as a **separate, temporary** MCP server — not the shared `google` one: `claude mcp add google-verify --scope user -- node <worktree-path>/dist/index.js`. Use `--scope user`, not the default `local` — `local` scope binds to whatever directory the `claude mcp add` command is run *from* (its cwd), not the target server's directory, so running it from inside the worktree registers the server against the worktree's own project instead of the session's actual project.
-3. Reconnect the session so the new server actually spawns: `/exit`, then `claude --resume` (per the MCP Reconnect rule in the global CLAUDE.md — MCP servers only spawn at process start, config changes don't hot-reload).
-4. Call the new tool(s) for real through `mcp__google-verify__...`, and use the exact call + result as the live-verify evidence for the MR proposal.
-5. Remove the temporary server once verification is captured — `claude mcp remove google-verify` — then reconnect again to drop it from the live session.
+2. `@modelcontextprotocol/sdk` is already a dependency of this repo (used to build the server itself), so it's available in `node_modules` for a client too. Write a small throwaway script (e.g. `verify-live.mjs`, inside the worktree so module resolution finds `node_modules` — never commit it) that:
+   - Constructs `new StdioClientTransport({ command: "node", args: ["dist/index.js"] })` and a `new Client({ name, version }, { capabilities: {} })`, then `client.connect(transport)` — this spawns the branch's *own* built server as a subprocess and speaks real MCP to it directly, completely bypassing whatever the harness's live session has loaded.
+   - Calls the new tool(s) for real via `client.callTool({ name, arguments })` against real calendar data — prefer a calendar clearly meant for this (e.g. one named `zzz-live-verify-delete-me`, if one exists) and round-trip any state change (flip, verify, flip back) so the account is left exactly as found.
+   - Logs each call + raw response — that transcript is the live-verify evidence for the MR proposal.
+3. Delete the script afterward; it's a one-off verification tool, not part of the feature (never `git add` it).
+
+No `claude mcp add`/`remove`, no reconnect, no owner action required.
