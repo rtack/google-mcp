@@ -5,6 +5,7 @@ const mockCalendarListList = vi.fn();
 const mockCalendarListGet = vi.fn();
 const mockCalendarsInsert = vi.fn();
 const mockCalendarsPatch = vi.fn();
+const mockCalendarListPatch = vi.fn();
 const mockEventsList = vi.fn();
 const mockEventsGet = vi.fn();
 const mockEventsInsert = vi.fn();
@@ -13,6 +14,10 @@ const mockEventsDelete = vi.fn();
 const mockEventsMove = vi.fn();
 const mockEventsQuickAdd = vi.fn();
 const mockFreebusyQuery = vi.fn();
+const { mockLoadPresets, mockResolvePreset } = vi.hoisted(() => ({
+  mockLoadPresets: vi.fn(),
+  mockResolvePreset: vi.fn(),
+}));
 
 vi.mock("googleapis", () => ({
   google: {
@@ -20,6 +25,7 @@ vi.mock("googleapis", () => ({
       calendarList: {
         list: mockCalendarListList,
         get: mockCalendarListGet,
+        patch: mockCalendarListPatch,
       },
       calendars: {
         insert: mockCalendarsInsert,
@@ -39,6 +45,11 @@ vi.mock("googleapis", () => ({
       },
     }),
   },
+}));
+
+vi.mock("../services/calendar-presets.js", () => ({
+  loadPresets: mockLoadPresets,
+  resolvePreset: mockResolvePreset,
 }));
 
 import { CalendarService } from "../services/calendar.js";
@@ -168,6 +179,109 @@ describe("CalendarService", () => {
       const call = mockCalendarsPatch.mock.calls[0][0];
       expect(call.requestBody.description).toBe("New description");
       expect(call.requestBody.summary).toBeUndefined();
+    });
+  });
+
+  describe("setCalendarSelected", () => {
+    it("should patch selected to true", async () => {
+      mockCalendarListPatch.mockResolvedValue({
+        data: { id: "work", summary: "Work", selected: true },
+      });
+
+      const result = await service.setCalendarSelected("work", true);
+
+      expect(mockCalendarListPatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calendarId: "work",
+          requestBody: { selected: true },
+        })
+      );
+      expect(result.selected).toBe(true);
+    });
+
+    it("should patch selected to false", async () => {
+      mockCalendarListPatch.mockResolvedValue({
+        data: { id: "work", summary: "Work", selected: false },
+      });
+
+      const result = await service.setCalendarSelected("work", false);
+
+      expect(mockCalendarListPatch).toHaveBeenCalledWith(
+        expect.objectContaining({ requestBody: { selected: false } })
+      );
+      expect(result.selected).toBe(false);
+    });
+  });
+
+  describe("applySelection", () => {
+    it("should select only the given IDs and deselect the rest", async () => {
+      mockCalendarListList.mockResolvedValue({
+        data: {
+          items: [
+            { id: "primary", summary: "Primary" },
+            { id: "work", summary: "Work" },
+            { id: "wcs", summary: "WCS Europe 2027" },
+          ],
+        },
+      });
+      mockCalendarListPatch.mockImplementation(({ calendarId, requestBody }) =>
+        Promise.resolve({ data: { id: calendarId, summary: calendarId, selected: requestBody.selected } })
+      );
+
+      const result = await service.applySelection(["primary", "wcs"]);
+
+      expect(mockCalendarListPatch).toHaveBeenCalledTimes(3);
+      expect(mockCalendarListPatch).toHaveBeenCalledWith(
+        expect.objectContaining({ calendarId: "primary", requestBody: { selected: true } })
+      );
+      expect(mockCalendarListPatch).toHaveBeenCalledWith(
+        expect.objectContaining({ calendarId: "work", requestBody: { selected: false } })
+      );
+      expect(mockCalendarListPatch).toHaveBeenCalledWith(
+        expect.objectContaining({ calendarId: "wcs", requestBody: { selected: true } })
+      );
+      expect(result.find((c) => c.id === "primary")?.selected).toBe(true);
+      expect(result.find((c) => c.id === "work")?.selected).toBe(false);
+    });
+  });
+
+  describe("applyPreset", () => {
+    it("should resolve the preset and apply it as a selection", async () => {
+      mockResolvePreset.mockReturnValue(["primary", "wcs"]);
+      mockCalendarListList.mockResolvedValue({
+        data: { items: [{ id: "primary" }, { id: "wcs" }] },
+      });
+      mockCalendarListPatch.mockImplementation(({ calendarId, requestBody }) =>
+        Promise.resolve({ data: { id: calendarId, selected: requestBody.selected } })
+      );
+
+      const result = await service.applyPreset("wcs-only");
+
+      expect(mockResolvePreset).toHaveBeenCalledWith("wcs-only");
+      expect(result.every((c) => c.selected)).toBe(true);
+    });
+  });
+
+  describe("listPresets", () => {
+    it("should resolve preset calendar IDs to summaries where possible", async () => {
+      mockLoadPresets.mockReturnValue({
+        work: ["primary", "unknown-id"],
+      });
+      mockCalendarListList.mockResolvedValue({
+        data: { items: [{ id: "primary", summary: "Primary" }] },
+      });
+
+      const result = await service.listPresets();
+
+      expect(result).toEqual([
+        {
+          name: "work",
+          calendars: [
+            { id: "primary", summary: "Primary" },
+            { id: "unknown-id", summary: undefined },
+          ],
+        },
+      ]);
     });
   });
 
