@@ -93,3 +93,28 @@ import { MyService } from "../services/my-service.js";
 ## Testing
 
 Always write tests when adding new functionality. New MCP tools, service methods, or handler branches must include corresponding test cases in `src/__tests__/` in the same commit.
+
+## Branching & terminology: MR vs PR
+
+Three-branch model (local to this checkout):
+
+- **`main`** — normally a pure mirror of `upstream/main` (`quinnjr/google-mcp`); doc-only exceptions may land here directly when explicitly instructed. All feature branches start here: `git checkout -b feat/<name> main`.
+- **`local-dev`** — the integration branch actually built and run as the live MCP server (`node dist/index.js`). This is Raphael's local dev environment — the whole point is to run in-progress features here before they're ever submitted anywhere.
+- **`feat/<name>`** — one per feature/fix, pushed to `origin` (the fork, `rtack/google-mcp`) once ready.
+
+Two distinct actions, two distinct terms — do not use them interchangeably:
+
+- **MR** = merging a `feat/<name>` branch into **`local-dev`** (Raphael's own fork/repo). A plain `git merge`, not a GitHub pull request object. **Gate: live-verified only** (a real MCP tool call against real Google APIs/data — green tests are necessary but not sufficient, see the Photos-feature history below). **No code review required** — it's Raphael's own local integration branch, reviewing your own local merge adds no value.
+- **PR** = a GitHub pull request opened against **`quinnjr/google-mcp`** (the external upstream repo). **Gate: everything MR requires, plus**: `README.md`'s tool table updated, and **code-reviewed** (e.g. `/code-review` on the branch diff, findings addressed or explicitly accepted) — this one matters because it's headed to someone else's repo for their review.
+
+**Merging (MR) is the repo owner's action alone — Claude must never run `git merge` here, into `local-dev` or anywhere else.** Claude's job stops at: implement, test, live-verify as much as possible without merging, push the feature branch. Opening a PR needs the owner's explicit, in-the-moment approval for that specific PR — a prior instruction to fix something doesn't carry forward to opening (or closing, or reopening) a PR about it.
+
+Before an **MR** (merge into `local-dev`), confirm:
+- [ ] Tests written in the same commit, `pnpm test` and `pnpm lint` clean
+- [ ] Live-verified against the real API, or explicitly noted as deferred
+
+Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
+- [ ] `README.md`'s per-domain tool table updated if a tool was added/changed/removed
+- [ ] Code-reviewed (e.g. `/code-review` on the branch diff) — findings addressed or explicitly noted as accepted, not silently skipped
+- [ ] PR targets `quinnjr/google-mcp` (upstream), not the fork's own `main`, unless explicitly told otherwise
+- [ ] Explicit, in-the-moment approval for opening (not inferred from a related request)
