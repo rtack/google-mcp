@@ -254,6 +254,17 @@ export class CalendarService {
     }));
   }
 
+  /**
+   * Permanently deletes a calendar (not an event) and everything on it.
+   * Irreversible — unlike removing a calendar from your own list, this
+   * deletes it for every user it's shared with. Only works on calendars
+   * you own; deleting a subscribed-to calendar just unsubscribes you
+   * (use calendarList operations for that, not this).
+   */
+  public async deleteCalendar(calendarId: string): Promise<void> {
+    await this.calendar.calendars.delete({ calendarId });
+  }
+
   // Event Operations
 
   public async listEvents(

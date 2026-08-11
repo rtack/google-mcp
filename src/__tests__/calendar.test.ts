@@ -6,6 +6,7 @@ const mockCalendarListGet = vi.fn();
 const mockCalendarsInsert = vi.fn();
 const mockCalendarsPatch = vi.fn();
 const mockCalendarListPatch = vi.fn();
+const mockCalendarsDelete = vi.fn();
 const mockEventsList = vi.fn();
 const mockEventsGet = vi.fn();
 const mockEventsInsert = vi.fn();
@@ -30,6 +31,7 @@ vi.mock("googleapis", () => ({
       calendars: {
         insert: mockCalendarsInsert,
         patch: mockCalendarsPatch,
+        delete: mockCalendarsDelete,
       },
       events: {
         list: mockEventsList,
@@ -282,6 +284,18 @@ describe("CalendarService", () => {
           ],
         },
       ]);
+    });
+  });
+
+  describe("deleteCalendar", () => {
+    it("should delete a calendar", async () => {
+      mockCalendarsDelete.mockResolvedValue({});
+
+      await service.deleteCalendar("cal-id@group.calendar.google.com");
+
+      expect(mockCalendarsDelete).toHaveBeenCalledWith({
+        calendarId: "cal-id@group.calendar.google.com",
+      });
     });
   });
 
