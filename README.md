@@ -228,6 +228,7 @@ Tokens are stored locally and will be refreshed automatically:
 |------|-------------|
 | `calendar_list` | List all calendars |
 | `calendar_create` | Create a new secondary calendar |
+| `calendar_update` | Rename or update a calendar's own metadata |
 | `calendar_get` | Get calendar details |
 | `calendar_list_events` | List events from calendar |
 | `calendar_get_event` | Get event details |

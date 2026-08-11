@@ -970,6 +970,36 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "calendar_update",
+            description: "Rename or otherwise update a calendar's own metadata (not an event). Only provided fields are changed.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                calendarId: {
+                  type: "string",
+                  description: "Calendar ID to update",
+                },
+                summary: {
+                  type: "string",
+                  description: "New calendar name/title",
+                },
+                description: {
+                  type: "string",
+                  description: "New calendar description",
+                },
+                timeZone: {
+                  type: "string",
+                  description: "New time zone (e.g., 'Europe/Zurich')",
+                },
+                location: {
+                  type: "string",
+                  description: "New geographic location of the calendar as free-form text",
+                },
+              },
+              required: ["calendarId"],
+            },
+          },
+          {
             name: "calendar_get",
             description: "Get details of a specific calendar.",
             inputSchema: {
@@ -3797,6 +3827,31 @@ export class GoogleWorkspaceMCPServer {
             location?: string;
           };
           const result = await this.calendar!.createCalendar({
+            summary,
+            description,
+            timeZone,
+            location,
+          });
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_update") {
+          const { calendarId, summary, description, timeZone, location } = args as {
+            calendarId: string;
+            summary?: string;
+            description?: string;
+            timeZone?: string;
+            location?: string;
+          };
+          const result = await this.calendar!.updateCalendar({
+            calendarId,
             summary,
             description,
             timeZone,

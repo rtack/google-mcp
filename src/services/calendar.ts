@@ -51,6 +51,14 @@ export interface CalendarCreateOptions {
   location?: string;
 }
 
+export interface CalendarUpdateOptions {
+  calendarId: string;
+  summary?: string;
+  description?: string;
+  timeZone?: string;
+  location?: string;
+}
+
 export interface EventCreateOptions {
   calendarId?: string;
   summary: string;
@@ -157,6 +165,25 @@ export class CalendarService {
       // only exists once it's fetched via calendarList.get or listCalendars.
       primary: false,
       accessRole: "owner",
+    };
+  }
+
+  public async updateCalendar(options: CalendarUpdateOptions): Promise<CalendarInfo> {
+    const response = await this.calendar.calendars.patch({
+      calendarId: options.calendarId,
+      requestBody: {
+        summary: options.summary,
+        description: options.description,
+        timeZone: options.timeZone,
+        location: options.location,
+      },
+    });
+
+    return {
+      id: response.data.id!,
+      summary: response.data.summary || "",
+      description: response.data.description || undefined,
+      timeZone: response.data.timeZone || undefined,
     };
   }
 
