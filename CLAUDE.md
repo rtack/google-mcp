@@ -121,6 +121,19 @@ Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
 - [ ] PR targets `quinnjr/google-mcp` (upstream), not the fork's own `main`, unless explicitly told otherwise
 - [ ] Explicit, in-the-moment approval for opening (not inferred from a related request)
 
+## MR/PR Gates Require Evidence, Not Just a Checked Box
+
+A checklist item above is satisfied only when its evidence is pasted into that turn — not recalled from memory or asserted in passing. "Tests pass" and "☑" are not evidence; the actual output is.
+
+- **Tests written in the same commit** — name the test file(s) and how many cases were added/changed (e.g. "`calendar.test.ts` +8 cases, `calendar-presets.test.ts` new file, 8 cases").
+- **`pnpm test` / `pnpm lint` clean** — paste the real summary line from the run (e.g. "Test Files 14 passed (14), Tests 276 passed (276)"; "0 errors, 200 warnings"), not a claim that it passed.
+- **Live-verified against the real API** — state the exact tool call made and its result, or say explicitly "deferred" and why (e.g. "not yet verified — the new MCP tools aren't loaded until the session reconnects").
+- **Explicit, in-the-moment approval** — quote the user's literal words that gave it; a paraphrase or an inference from an earlier, related turn doesn't count.
+- **(PR only) README table updated** — name the section/rows changed.
+- **(PR only) Code-reviewed** — name the method used (e.g. `/code-review` on the branch diff) and state findings addressed vs. explicitly accepted.
+
+This doesn't replace the checklists above — it's how each line gets satisfied. An item with no evidence blocks the merge/PR exactly like an unchecked one.
+
 ## Worktree Isolation Required for All Work
 
 Multiple sessions can work on this repo concurrently. To prevent one session's uncommitted changes from silently landing in another session's shared checkout — as happened when an untracked `setCalendarSelected`/`selected` addition to `calendar.ts` appeared on `feat/calendar-create` without the session working that branch having made it — all work here must happen in an isolated git worktree, never directly in the shared checkout.
