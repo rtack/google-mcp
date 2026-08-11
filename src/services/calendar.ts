@@ -1,4 +1,5 @@
 import { google, type calendar_v3, type Auth } from "googleapis";
+import { loadPresets, resolvePreset } from "./calendar-presets.js";
 
 export interface CalendarEvent {
   id: string;
@@ -42,6 +43,12 @@ export interface CalendarInfo {
   accessRole?: string;
   backgroundColor?: string;
   foregroundColor?: string;
+  selected?: boolean;
+}
+
+export interface CalendarPresetResult {
+  name: string;
+  calendars: Array<{ id: string; summary?: string }>;
 }
 
 export interface CalendarCreateOptions {
@@ -125,6 +132,7 @@ export class CalendarService {
       accessRole: cal.accessRole || undefined,
       backgroundColor: cal.backgroundColor || undefined,
       foregroundColor: cal.foregroundColor || undefined,
+      selected: cal.selected || false,
     }));
   }
 
@@ -142,6 +150,7 @@ export class CalendarService {
       accessRole: response.data.accessRole || undefined,
       backgroundColor: response.data.backgroundColor || undefined,
       foregroundColor: response.data.foregroundColor || undefined,
+      selected: response.data.selected || false,
     };
   }
 
@@ -185,6 +194,64 @@ export class CalendarService {
       description: response.data.description || undefined,
       timeZone: response.data.timeZone || undefined,
     };
+  }
+
+  /**
+   * Set whether a calendar is checked ("selected") in the calendar UI. This
+   * does not add/remove the calendar from the user's calendar list — only
+   * whether its events currently show up in views.
+   */
+  public async setCalendarSelected(calendarId: string, selected: boolean): Promise<CalendarInfo> {
+    const response = await this.calendar.calendarList.patch({
+      calendarId,
+      requestBody: { selected },
+    });
+
+    return {
+      id: response.data.id!,
+      summary: response.data.summary || "",
+      selected: response.data.selected || false,
+    };
+  }
+
+  /**
+   * Reconcile the selection state of every calendar in the user's list to
+   * match `selectedIds` exactly: those get selected: true, every other
+   * calendar gets selected: false. Patches run in parallel.
+   */
+  public async applySelection(selectedIds: string[]): Promise<CalendarInfo[]> {
+    const wanted = new Set(selectedIds);
+    const calendars = await this.listCalendars();
+
+    return Promise.all(
+      calendars.map((cal) => this.setCalendarSelected(cal.id, wanted.has(cal.id)))
+    );
+  }
+
+  /**
+   * Resolve a named preset (from the user-edited presets config) to a list
+   * of calendar IDs, then apply it via applySelection.
+   */
+  public async applyPreset(name: string): Promise<CalendarInfo[]> {
+    const selectedIds = resolvePreset(name);
+    return this.applySelection(selectedIds);
+  }
+
+  /**
+   * List all presets defined in the presets config, with each calendar ID
+   * resolved to its summary where possible (unresolved IDs are still
+   * included, with summary left undefined, so typos/removed calendars are
+   * visible rather than silently dropped).
+   */
+  public async listPresets(): Promise<CalendarPresetResult[]> {
+    const presets = loadPresets();
+    const calendars = await this.listCalendars();
+    const summaryById = new Map(calendars.map((cal) => [cal.id, cal.summary]));
+
+    return Object.entries(presets).map(([name, ids]) => ({
+      name,
+      calendars: ids.map((id) => ({ id, summary: summaryById.get(id) })),
+    }));
   }
 
   // Event Operations

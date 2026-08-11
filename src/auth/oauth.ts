@@ -87,7 +87,7 @@ const SCOPES = [
  * - macOS: ~/Library/Application Support/google-mcp or $XDG_CONFIG_HOME/google-mcp
  * - Windows: %APPDATA%/google-mcp
  */
-function getConfigDir(): string {
+export function getConfigDir(): string {
   const platform = os.platform();
 
   if (platform === "win32") {
