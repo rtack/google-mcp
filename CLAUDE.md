@@ -119,3 +119,10 @@ Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
 - [ ] Code-reviewed (e.g. `/code-review` on the branch diff) — findings addressed or explicitly noted as accepted, not silently skipped
 - [ ] PR targets `quinnjr/google-mcp` (upstream), not the fork's own `main`, unless explicitly told otherwise
 - [ ] Explicit, in-the-moment approval for opening (not inferred from a related request)
+
+## Worktree Isolation Required for All Work
+
+Multiple sessions can work on this repo concurrently. To prevent one session's uncommitted changes from silently landing in another session's shared checkout — as happened when an untracked `setCalendarSelected`/`selected` addition to `calendar.ts` appeared on `feat/calendar-create` without the session working that branch having made it — all work here must happen in an isolated git worktree, never directly in the shared checkout.
+
+- Before editing any file, use `EnterWorktree` (or launch with `--worktree`) to get an isolated copy of the current branch.
+- Never assume the working tree is clean or matches what you last left it — a concurrent session may have uncommitted changes sitting in the shared checkout that aren't yours. Worktrees make this a non-issue instead of something to remember to check.
