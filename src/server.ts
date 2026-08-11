@@ -917,6 +917,66 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "calendar_set_selected",
+            description:
+              "Set whether a calendar is checked (selected) in the Google Calendar UI. Does not add/remove the calendar from the user's calendar list — only whether its events currently show up in views.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                calendarId: {
+                  type: "string",
+                  description: "Calendar ID to update",
+                },
+                selected: {
+                  type: "boolean",
+                  description: "Whether the calendar should be checked/selected",
+                },
+              },
+              required: ["calendarId", "selected"],
+            },
+          },
+          {
+            name: "calendar_apply_selection",
+            description:
+              "Reconcile calendar selection to match exactly this list: the given calendar IDs are checked/selected, every other calendar in the user's list is unchecked/deselected.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                selectedIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Calendar IDs that should end up selected",
+                },
+              },
+              required: ["selectedIds"],
+            },
+          },
+          {
+            name: "calendar_apply_preset",
+            description:
+              "Apply a named calendar-selection preset (defined by the user in the calendar-presets.json config file) — selects exactly the calendars in that preset, deselects the rest.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Preset name, as defined in calendar-presets.json",
+                },
+              },
+              required: ["name"],
+            },
+          },
+          {
+            name: "calendar_list_presets",
+            description:
+              "List calendar-selection presets defined in calendar-presets.json, with each calendar ID resolved to its summary where possible.",
+            inputSchema: {
+              type: "object",
+              properties: {},
+              required: [],
+            },
+          },
+          {
             name: "calendar_list_events",
             description: "List events from a calendar.",
             inputSchema: {
@@ -3591,6 +3651,57 @@ export class GoogleWorkspaceMCPServer {
         if (name === "calendar_get") {
           const { calendarId } = args as { calendarId: string };
           const result = await this.calendar!.getCalendar(calendarId);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_set_selected") {
+          const { calendarId, selected } = args as { calendarId: string; selected: boolean };
+          const result = await this.calendar!.setCalendarSelected(calendarId, selected);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_apply_selection") {
+          const { selectedIds } = args as { selectedIds: string[] };
+          const result = await this.calendar!.applySelection(selectedIds);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_apply_preset") {
+          const { name: presetName } = args as { name: string };
+          const result = await this.calendar!.applyPreset(presetName);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_list_presets") {
+          const result = await this.calendar!.listPresets();
           return {
             content: [
               {
