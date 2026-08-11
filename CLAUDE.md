@@ -107,11 +107,12 @@ Two distinct actions, two distinct terms — do not use them interchangeably:
 - **MR** = merging a `feat/<name>` branch into **`local-dev`** (Raphael's own fork/repo). A plain `git merge`, not a GitHub pull request object. **Gate: live-verified only** (a real MCP tool call against real Google APIs/data — green tests are necessary but not sufficient, see the Photos-feature history below). **No code review required** — it's Raphael's own local integration branch, reviewing your own local merge adds no value.
 - **PR** = a GitHub pull request opened against **`quinnjr/google-mcp`** (the external upstream repo). **Gate: everything MR requires, plus**: `README.md`'s tool table updated, and **code-reviewed** (e.g. `/code-review` on the branch diff, findings addressed or explicitly accepted) — this one matters because it's headed to someone else's repo for their review.
 
-**Merging (MR) is the repo owner's action alone — Claude must never run `git merge` here, into `local-dev` or anywhere else.** Claude's job stops at: implement, test, live-verify as much as possible without merging, push the feature branch. Opening a PR needs the owner's explicit, in-the-moment approval for that specific PR — a prior instruction to fix something doesn't carry forward to opening (or closing, or reopening) a PR about it.
+**Merging (MR) is approval-gated, not Claude-forbidden.** Claude may run `git merge` into `local-dev` — but only after: (1) the MR gate below is satisfied, (2) Claude has explicitly proposed *that specific merge* and stated the gate is satisfied, and (3) the owner has explicitly approved *that specific proposal* (approve/decline, not inferred from an earlier, related instruction). Never merge preemptively "since tests pass" or because a merge seems like the obvious next step — always propose first and wait. Opening a PR follows the same propose-then-approve pattern, at the PR gate.
 
-Before an **MR** (merge into `local-dev`), confirm:
+Before an **MR** (merge into `local-dev`), confirm, then propose and wait for approval:
 - [ ] Tests written in the same commit, `pnpm test` and `pnpm lint` clean
 - [ ] Live-verified against the real API, or explicitly noted as deferred
+- [ ] Explicit, in-the-moment approval for *that specific merge*
 
 Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
 - [ ] `README.md`'s per-domain tool table updated if a tool was added/changed/removed
