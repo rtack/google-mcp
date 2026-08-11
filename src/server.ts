@@ -1166,6 +1166,20 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "calendar_delete",
+            description: "Permanently delete a calendar (not an event) and everything on it. Irreversible. Only works on calendars you own.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                calendarId: {
+                  type: "string",
+                  description: "Calendar ID to delete",
+                },
+              },
+              required: ["calendarId"],
+            },
+          },
+          {
             name: "calendar_get",
             description: "Get details of a specific calendar.",
             inputSchema: {
@@ -4047,6 +4061,19 @@ export class GoogleWorkspaceMCPServer {
               {
                 type: "text",
                 text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_delete") {
+          const { calendarId } = args as { calendarId: string };
+          await this.calendar!.deleteCalendar(calendarId);
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Calendar ${calendarId} deleted.`,
               },
             ],
           };
