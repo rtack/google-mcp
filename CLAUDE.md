@@ -112,7 +112,7 @@ Two distinct actions, two distinct terms — do not use them interchangeably:
 
 Before an **MR** (merge into `local-dev`), confirm, then propose and wait for approval:
 - [ ] Tests written in the same commit, `pnpm test` and `pnpm lint` clean
-- [ ] Live-verified against the real API, or explicitly noted as deferred
+- [ ] Live-verified against the real API
 - [ ] Explicit, in-the-moment approval for *that specific merge*
 
 Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
@@ -127,12 +127,14 @@ A checklist item above is satisfied only when its evidence is pasted into that t
 
 - **Tests written in the same commit** — name the test file(s) and how many cases were added/changed (e.g. "`calendar.test.ts` +8 cases, `calendar-presets.test.ts` new file, 8 cases").
 - **`pnpm test` / `pnpm lint` clean** — paste the real summary line from the run (e.g. "Test Files 14 passed (14), Tests 276 passed (276)"; "0 errors, 200 warnings"), not a claim that it passed.
-- **Live-verified against the real API** — state the exact tool call made and its result, or say explicitly "deferred" and why (e.g. "not yet verified — the new MCP tools aren't loaded until the session reconnects").
+- **Live-verified against the real API** — state the exact tool call made and its result. "Deferred" is not evidence of anything except that this item is unmet — say so plainly if it's the case, don't dress it up as satisfied.
 - **Explicit, in-the-moment approval** — quote the user's literal words that gave it; a paraphrase or an inference from an earlier, related turn doesn't count.
 - **(PR only) README table updated** — name the section/rows changed.
 - **(PR only) Code-reviewed** — name the method used (e.g. `/code-review` on the branch diff) and state findings addressed vs. explicitly accepted.
 
 This doesn't replace the checklists above — it's how each line gets satisfied. An item with no evidence blocks the merge/PR exactly like an unchecked one.
+
+**Don't propose the merge/PR itself until every item has evidence.** A turn that lists which items are met and which aren't is still gate-checking, not a proposal — never frame it as "this message is that request" while an item is still open. If an unmet item can be satisfied directly (e.g. running the live-verification call), do that first and then propose with full evidence. If it needs the owner's input, ask about that specific blocker on its own — not bundled with a merge request that isn't actually ready yet.
 
 ## Worktree Isolation Required for All Work
 
