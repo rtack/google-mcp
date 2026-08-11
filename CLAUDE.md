@@ -142,3 +142,13 @@ Multiple sessions can work on this repo concurrently. To prevent one session's u
 
 - Before editing any file, use `EnterWorktree` (or launch with `--worktree`) to get an isolated copy of the current branch.
 - Never assume the working tree is clean or matches what you last left it — a concurrent session may have uncommitted changes sitting in the shared checkout that aren't yours. Worktrees make this a non-issue instead of something to remember to check.
+
+## Live-Verifying a `feat/` Branch Before an MR
+
+The live `google` MCP connection runs `local-dev`'s build, so a `feat/<name>` branch's new tools aren't callable through real MCP until they're merged — but merging is exactly what the live-verify gate has to happen *before*. Resolve that without touching the shared `local-dev`-backed connection (other sessions may depend on it):
+
+1. Build the feature worktree: `pnpm build` inside its worktree directory.
+2. Register it as a **separate, temporary** MCP server — not the shared `google` one: `claude mcp add google-verify -- node <worktree-path>/dist/index.js` (default `local` scope keeps it private to this project).
+3. Reconnect the session so the new server actually spawns: `/exit`, then `claude --resume` (per the MCP Reconnect rule in the global CLAUDE.md — MCP servers only spawn at process start, config changes don't hot-reload).
+4. Call the new tool(s) for real through `mcp__google-verify__...`, and use the exact call + result as the live-verify evidence for the MR proposal.
+5. Remove the temporary server once verification is captured — `claude mcp remove google-verify` — then reconnect again to drop it from the live session.
