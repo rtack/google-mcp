@@ -4,6 +4,7 @@ import type { Auth } from "googleapis";
 const mockCalendarListList = vi.fn();
 const mockCalendarListGet = vi.fn();
 const mockCalendarsInsert = vi.fn();
+const mockCalendarsPatch = vi.fn();
 const mockEventsList = vi.fn();
 const mockEventsGet = vi.fn();
 const mockEventsInsert = vi.fn();
@@ -22,6 +23,7 @@ vi.mock("googleapis", () => ({
       },
       calendars: {
         insert: mockCalendarsInsert,
+        patch: mockCalendarsPatch,
       },
       events: {
         list: mockEventsList,
@@ -128,6 +130,44 @@ describe("CalendarService", () => {
       const result = await service.createCalendar({ summary: "Minimal" });
 
       expect(result.id).toBe("minimal-cal-id");
+    });
+  });
+
+  describe("updateCalendar", () => {
+    it("should rename a calendar", async () => {
+      mockCalendarsPatch.mockResolvedValue({
+        data: {
+          id: "cal-id@group.calendar.google.com",
+          summary: "WCS Europe",
+          description: "West Coast Swing events",
+          timeZone: "Europe/Zurich",
+        },
+      });
+
+      const result = await service.updateCalendar({
+        calendarId: "cal-id@group.calendar.google.com",
+        summary: "WCS Europe",
+      });
+
+      expect(mockCalendarsPatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calendarId: "cal-id@group.calendar.google.com",
+          requestBody: expect.objectContaining({ summary: "WCS Europe" }),
+        })
+      );
+      expect(result.summary).toBe("WCS Europe");
+    });
+
+    it("should update only the fields provided", async () => {
+      mockCalendarsPatch.mockResolvedValue({
+        data: { id: "cal-id", summary: "Unchanged", description: "New description" },
+      });
+
+      await service.updateCalendar({ calendarId: "cal-id", description: "New description" });
+
+      const call = mockCalendarsPatch.mock.calls[0][0];
+      expect(call.requestBody.description).toBe("New description");
+      expect(call.requestBody.summary).toBeUndefined();
     });
   });
 
