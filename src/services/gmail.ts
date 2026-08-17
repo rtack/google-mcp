@@ -13,6 +13,7 @@ export interface GmailMessage {
   to?: string;
   date?: string;
   body?: string;
+  htmlBody?: string;
   isUnread?: boolean;
 }
 
@@ -76,30 +77,48 @@ export interface SendEmailOptions {
 // Real messages commonly nest the actual text one or more levels deep, e.g.
 // multipart/mixed [ multipart/alternative [ text/plain, text/html ], attachment ].
 // A top-level-only search finds neither part and silently returns an empty body,
-// even though the message plainly has text. Walk the whole part tree instead,
-// preferring text/plain and falling back to text/html.
+// even though the message plainly has text. Walk the whole part tree instead.
+function findPart(
+  part: gmail_v1.Schema$MessagePart,
+  mimeType: string
+): gmail_v1.Schema$MessagePart | undefined {
+  if (part.mimeType === mimeType && part.body?.data) return part;
+  for (const child of part.parts || []) {
+    const found = findPart(child, mimeType);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+function decodePart(part?: gmail_v1.Schema$MessagePart): string | undefined {
+  return part?.body?.data
+    ? Buffer.from(part.body.data, "base64").toString("utf-8")
+    : undefined;
+}
+
+// Preferring text/plain and falling back to text/html: this is the
+// general-purpose "give me readable text" body. It intentionally discards
+// HTML markup (bold, links, etc.) even when a text/html part exists,
+// because most callers just want the text. Use extractHtmlBody() below when
+// the actual markup matters (e.g. bold emphasis in a message).
 function extractBody(payload?: gmail_v1.Schema$MessagePart | null): string {
   if (!payload) return "";
-  if (payload.body?.data) {
-    return Buffer.from(payload.body.data, "base64").toString("utf-8");
-  }
+  if (payload.body?.data) return decodePart(payload) || "";
+  return (
+    decodePart(findPart(payload, "text/plain")) ||
+    decodePart(findPart(payload, "text/html")) ||
+    ""
+  );
+}
 
-  const findPart = (
-    part: gmail_v1.Schema$MessagePart,
-    mimeType: string
-  ): gmail_v1.Schema$MessagePart | undefined => {
-    if (part.mimeType === mimeType && part.body?.data) return part;
-    for (const child of part.parts || []) {
-      const found = findPart(child, mimeType);
-      if (found) return found;
-    }
-    return undefined;
-  };
-
-  const textPart = findPart(payload, "text/plain") || findPart(payload, "text/html");
-  return textPart?.body?.data
-    ? Buffer.from(textPart.body.data, "base64").toString("utf-8")
-    : "";
+// The raw text/html part, if the message has one — undefined otherwise (e.g.
+// a plain-text-only message). This is the only way to see formatting that
+// extractBody()'s plain-text preference silently drops: gmail_v1's typed
+// client, and this service, previously exposed no path to it at all.
+function extractHtmlBody(payload?: gmail_v1.Schema$MessagePart | null): string | undefined {
+  if (!payload) return undefined;
+  if (payload.mimeType === "text/html") return decodePart(payload);
+  return decodePart(findPart(payload, "text/html"));
 }
 
 export class GmailService {
@@ -197,6 +216,7 @@ export class GmailService {
       headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value;
 
     const body = extractBody(response.data.payload);
+    const htmlBody = extractHtmlBody(response.data.payload);
 
     return {
       id: response.data.id || "",
@@ -208,6 +228,7 @@ export class GmailService {
       to: getHeader("To") || undefined,
       date: getHeader("Date") || undefined,
       body,
+      htmlBody,
       isUnread: response.data.labelIds?.includes("UNREAD"),
     };
   }
@@ -394,6 +415,7 @@ export class GmailService {
         headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value;
 
       const body = extractBody(msg.payload);
+      const htmlBody = extractHtmlBody(msg.payload);
 
       messages.push({
         id: msg.id || "",
@@ -405,6 +427,7 @@ export class GmailService {
         to: getHeader("To") || undefined,
         date: getHeader("Date") || undefined,
         body,
+        htmlBody,
         isUnread: msg.labelIds?.includes("UNREAD"),
       });
     }

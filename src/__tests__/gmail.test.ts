@@ -225,6 +225,49 @@ describe("GmailService", () => {
       const result = await service.getMessage("msg1");
 
       expect(result.body).toBe("Nested plain text");
+      expect(result.htmlBody).toBe("<p>Nested html</p>");
+    });
+
+    it("should return htmlBody even when body prefers the plain-text part", async () => {
+      // body deliberately drops formatting (prefers text/plain); htmlBody is
+      // the only way to see it. Same fixture as the nested-parts test above,
+      // phrased as its own case so this guarantee has a dedicated test.
+      mockMessagesGet.mockResolvedValue({
+        data: {
+          id: "msg1",
+          threadId: "t1",
+          payload: {
+            headers: [],
+            parts: [
+              { mimeType: "text/plain", body: { data: Buffer.from("Plain").toString("base64") } },
+              { mimeType: "text/html", body: { data: Buffer.from("<b>Bold</b>").toString("base64") } },
+            ],
+          },
+        },
+      });
+
+      const result = await service.getMessage("msg1");
+
+      expect(result.body).toBe("Plain");
+      expect(result.htmlBody).toBe("<b>Bold</b>");
+    });
+
+    it("should leave htmlBody undefined for a plain-text-only message", async () => {
+      mockMessagesGet.mockResolvedValue({
+        data: {
+          id: "msg1",
+          threadId: "t1",
+          payload: {
+            headers: [],
+            body: { data: Buffer.from("Just plain text").toString("base64") },
+          },
+        },
+      });
+
+      const result = await service.getMessage("msg1");
+
+      expect(result.body).toBe("Just plain text");
+      expect(result.htmlBody).toBeUndefined();
     });
 
     it("should fall back to text/html when no text/plain part exists at any depth", async () => {
@@ -247,6 +290,7 @@ describe("GmailService", () => {
       const result = await service.getMessage("msg1");
 
       expect(result.body).toBe("<p>Html only</p>");
+      expect(result.htmlBody).toBe("<p>Html only</p>");
     });
 
     it("should return an empty body when no text part exists anywhere", async () => {
@@ -474,6 +518,32 @@ describe("GmailService", () => {
       const result = await service.getThread("t1");
 
       expect(result.messages?.[0].body).toBe("Nested plain text");
+    });
+
+    it("should include each message's htmlBody when a text/html part exists", async () => {
+      mockThreadsGet.mockResolvedValue({
+        data: {
+          id: "t1",
+          messages: [
+            {
+              id: "msg1",
+              threadId: "t1",
+              payload: {
+                headers: [],
+                parts: [
+                  { mimeType: "text/plain", body: { data: Buffer.from("Plain").toString("base64") } },
+                  { mimeType: "text/html", body: { data: Buffer.from("<b>Bold</b>").toString("base64") } },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const result = await service.getThread("t1");
+
+      expect(result.messages?.[0].body).toBe("Plain");
+      expect(result.messages?.[0].htmlBody).toBe("<b>Bold</b>");
     });
   });
 

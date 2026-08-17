@@ -1441,7 +1441,8 @@ export class GoogleWorkspaceMCPServer {
           },
           {
             name: "gmail_get_message",
-            description: "Get a specific Gmail message by ID.",
+            description:
+              "Get a specific Gmail message by ID. Returns both `body` (plain text) and `htmlBody` (the raw text/html part, if present) — use htmlBody to see formatting (bold, links, etc.) that body's plain-text preference drops.",
             inputSchema: {
               type: "object",
               properties: {
@@ -1613,7 +1614,8 @@ export class GoogleWorkspaceMCPServer {
           },
           {
             name: "gmail_get_thread",
-            description: "Get a full email thread/conversation.",
+            description:
+              "Get a full email thread/conversation. Each message includes both `body` (plain text) and `htmlBody` (the raw text/html part, if present) — use htmlBody to see formatting (bold, links, etc.) that body's plain-text preference drops.",
             inputSchema: {
               type: "object",
               properties: {
