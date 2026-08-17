@@ -99,9 +99,9 @@ Always write tests when adding new functionality. New MCP tools, service methods
 
 Three-branch model (local to this checkout):
 
-- **`main`** — normally a pure mirror of `upstream/main` (`quinnjr/google-mcp`); doc-only exceptions may land here directly when explicitly instructed. All feature branches start here: `git checkout -b feat/<name> main`.
-- **`local-dev`** — the integration branch actually built and run as the live MCP server (`node dist/index.js`). This is Raphael's local dev environment — the whole point is to run in-progress features here before they're ever submitted anywhere.
-- **`feat/<name>`** — one per feature/fix, pushed to `origin` (the fork, `rtack/google-mcp`) once ready.
+- **`main`** — normally a pure mirror of `upstream/main` (`quinnjr/google-mcp`); doc-only exceptions may land here directly when explicitly instructed.
+- **`local-dev`** — the integration branch actually built and run as the live MCP server (`node dist/index.js`). This is Raphael's local dev environment — the whole point is to run in-progress features here before they're ever submitted anywhere. **All feature branches start here, not from `main`**: `git checkout -b feat/<name> local-dev`. `local-dev` is routinely ahead of `main` (it accumulates in-progress work before any of it goes upstream), so a `feat/` branch based on `main` will spuriously conflict on merge with everything already on `local-dev`, even when the two features never touch the same logic — as happened with `feat/gmail-filters` (2026-08-18) needing manual conflict resolution against unrelated attachments/drafts/Photos work purely because of the wrong base. A PR to upstream `quinnjr/google-mcp` still targets `main`'s content (see PR gate below) — this only changes what a local `feat/` branch is created *from*.
+- **`feat/<name>`** — one per feature/fix, pushed to `origin` (the fork, `rtack/google-mcp`) once ready. **Fast-forward only, no merge commits**: immediately before merging into `local-dev`, rebase the feature branch onto `local-dev`'s current tip (`git rebase local-dev` from the feature branch) and resolve any conflicts there, then merge — the merge into `local-dev` itself should be a fast-forward. Established 2026-08-11; do not merge with `--no-edit`/create a merge commit as a shortcut past this.
 
 Two distinct actions, two distinct terms — do not use them interchangeably:
 
