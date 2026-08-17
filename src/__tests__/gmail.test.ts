@@ -1197,6 +1197,32 @@ describe("GmailService", () => {
       expect(result.messages?.[1].body).toBe("");
       expect(result.messages?.[1].bodyHtml).toBeUndefined();
     });
+
+    it("should include each message's htmlBody when a text/html part exists", async () => {
+      mockThreadsGet.mockResolvedValue({
+        data: {
+          id: "t1",
+          messages: [
+            {
+              id: "msg1",
+              threadId: "t1",
+              payload: {
+                headers: [],
+                parts: [
+                  { mimeType: "text/plain", body: { data: Buffer.from("Plain").toString("base64") } },
+                  { mimeType: "text/html", body: { data: Buffer.from("<b>Bold</b>").toString("base64") } },
+                ],
+              },
+            },
+          ],
+        },
+      });
+
+      const result = await service.getThread("t1");
+
+      expect(result.messages?.[0].body).toBe("Plain");
+      expect(result.messages?.[0].htmlBody).toBe("<b>Bold</b>");
+    });
   });
 
   describe("searchEmails", () => {
