@@ -23,6 +23,10 @@ const mockThreadsTrash = vi.fn();
 const mockAttachmentsGet = vi.fn();
 const mockDraftsSend = vi.fn();
 const mockDraftsDelete = vi.fn();
+const mockFiltersCreate = vi.fn();
+const mockFiltersList = vi.fn();
+const mockFiltersGet = vi.fn();
+const mockFiltersDelete = vi.fn();
 
 vi.mock("googleapis", () => ({
   google: {
@@ -53,6 +57,14 @@ vi.mock("googleapis", () => ({
         drafts: {
           send: mockDraftsSend,
           delete: mockDraftsDelete,
+        },
+        settings: {
+          filters: {
+            create: mockFiltersCreate,
+            list: mockFiltersList,
+            get: mockFiltersGet,
+            delete: mockFiltersDelete,
+          },
         },
       },
     }),
@@ -693,6 +705,63 @@ describe("GmailService", () => {
     });
   });
 
+  describe("createFilter", () => {
+    it("should create a filter that archives matching mail", async () => {
+      mockFiltersCreate.mockResolvedValue({
+        data: {
+          id: "filter1",
+          criteria: { from: "noreply@pgsharp.com" },
+          action: { removeLabelIds: ["INBOX"] },
+        },
+      });
+
+      const result = await service.createFilter(
+        { from: "noreply@pgsharp.com" },
+        { removeLabelIds: ["INBOX"] }
+      );
+
+      expect(mockFiltersCreate).toHaveBeenCalledWith({
+        userId: "me",
+        requestBody: {
+          criteria: { from: "noreply@pgsharp.com" },
+          action: { removeLabelIds: ["INBOX"] },
+        },
+      });
+      expect(result.id).toBe("filter1");
+      expect(result.criteria.from).toBe("noreply@pgsharp.com");
+      expect(result.action.removeLabelIds).toEqual(["INBOX"]);
+    });
+  });
+
+  describe("listFilters", () => {
+    it("should list existing filters", async () => {
+      mockFiltersList.mockResolvedValue({
+        data: {
+          filter: [
+            {
+              id: "filter1",
+              criteria: { from: "a@example.com" },
+              action: { removeLabelIds: ["INBOX"] },
+            },
+          ],
+        },
+      });
+
+      const result = await service.listFilters();
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("filter1");
+    });
+
+    it("should return an empty array when there are no filters", async () => {
+      mockFiltersList.mockResolvedValue({ data: {} });
+
+      const result = await service.listFilters();
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe("downloadAttachment", () => {
     beforeEach(() => {
       mockAttachmentsGet.mockResolvedValue({
@@ -886,6 +955,33 @@ describe("GmailService", () => {
 
       expect(results).toEqual([]);
       expect(mockAttachmentsGet).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getFilter", () => {
+    it("should get a filter by ID", async () => {
+      mockFiltersGet.mockResolvedValue({
+        data: {
+          id: "filter1",
+          criteria: { from: "a@example.com" },
+          action: { removeLabelIds: ["INBOX"] },
+        },
+      });
+
+      const result = await service.getFilter("filter1");
+
+      expect(mockFiltersGet).toHaveBeenCalledWith({ userId: "me", id: "filter1" });
+      expect(result.id).toBe("filter1");
+    });
+  });
+
+  describe("deleteFilter", () => {
+    it("should delete a filter by ID", async () => {
+      mockFiltersDelete.mockResolvedValue({});
+
+      await service.deleteFilter("filter1");
+
+      expect(mockFiltersDelete).toHaveBeenCalledWith({ userId: "me", id: "filter1" });
     });
   });
 });

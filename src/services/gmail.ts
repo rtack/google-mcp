@@ -38,6 +38,30 @@ export interface GmailAttachment {
   size: number;
 }
 
+export interface GmailFilterCriteria {
+  from?: string;
+  to?: string;
+  subject?: string;
+  query?: string;
+  negatedQuery?: string;
+  hasAttachment?: boolean;
+  excludeChats?: boolean;
+  size?: number;
+  sizeComparison?: "smaller" | "larger" | "unspecified";
+}
+
+export interface GmailFilterAction {
+  addLabelIds?: string[];
+  removeLabelIds?: string[];
+  forward?: string;
+}
+
+export interface GmailFilter {
+  id: string;
+  criteria: GmailFilterCriteria;
+  action: GmailFilterAction;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -397,6 +421,53 @@ export class GmailService {
     await this.gmail.users.threads.trash({
       userId: "me",
       id: threadId,
+    });
+  }
+
+  // Filters
+
+  public async createFilter(
+    criteria: GmailFilterCriteria,
+    action: GmailFilterAction
+  ): Promise<GmailFilter> {
+    const response = await this.gmail.users.settings.filters.create({
+      userId: "me",
+      requestBody: { criteria, action },
+    });
+    return {
+      id: response.data.id || "",
+      criteria: (response.data.criteria || {}) as GmailFilterCriteria,
+      action: (response.data.action || {}) as GmailFilterAction,
+    };
+  }
+
+  public async listFilters(): Promise<GmailFilter[]> {
+    const response = await this.gmail.users.settings.filters.list({
+      userId: "me",
+    });
+    return (response.data.filter || []).map((f) => ({
+      id: f.id || "",
+      criteria: (f.criteria || {}) as GmailFilterCriteria,
+      action: (f.action || {}) as GmailFilterAction,
+    }));
+  }
+
+  public async getFilter(filterId: string): Promise<GmailFilter> {
+    const response = await this.gmail.users.settings.filters.get({
+      userId: "me",
+      id: filterId,
+    });
+    return {
+      id: response.data.id || "",
+      criteria: (response.data.criteria || {}) as GmailFilterCriteria,
+      action: (response.data.action || {}) as GmailFilterAction,
+    };
+  }
+
+  public async deleteFilter(filterId: string): Promise<void> {
+    await this.gmail.users.settings.filters.delete({
+      userId: "me",
+      id: filterId,
     });
   }
 

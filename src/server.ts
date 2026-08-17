@@ -39,6 +39,7 @@ import {
   DriveCreateFolderSchema,
   DriveSearchSchema,
   PhotosUploadSchema,
+  GmailCreateFilterSchema,
 } from "./types/index.js";
 
 export class GoogleWorkspaceMCPServer {
@@ -1687,6 +1688,72 @@ export class GoogleWorkspaceMCPServer {
                 },
               },
               required: ["messageId"],
+            },
+          },
+          {
+            name: "gmail_create_filter",
+            description:
+              "Create a real Gmail filter (server-side, persists in Gmail settings — visible under Settings > Filters and Blocked Addresses). Matches incoming/existing mail against criteria and applies an action automatically, e.g. archive mail from a sender by matching `from` and setting `removeLabelIds: [\"INBOX\"]`.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                criteria: {
+                  type: "object",
+                  description: "Match criteria — at least one field required.",
+                  properties: {
+                    from: { type: "string", description: "Sender address/domain to match" },
+                    to: { type: "string", description: "Recipient address to match" },
+                    subject: { type: "string", description: "Subject text to match" },
+                    query: { type: "string", description: "Gmail search query to match (same syntax as search)" },
+                    negatedQuery: { type: "string", description: "Gmail search query that must NOT match" },
+                    hasAttachment: { type: "boolean", description: "Match only mail with an attachment" },
+                    excludeChats: { type: "boolean", description: "Exclude chat messages from matching" },
+                    size: { type: "number", description: "Size threshold in bytes" },
+                    sizeComparison: { type: "string", enum: ["smaller", "larger", "unspecified"] },
+                  },
+                },
+                action: {
+                  type: "object",
+                  description: "Action to apply to matching mail — at least one field required.",
+                  properties: {
+                    addLabelIds: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Label IDs to add (e.g. a user label ID from gmail_list_labels)",
+                    },
+                    removeLabelIds: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Label IDs to remove — use [\"INBOX\"] to archive matching mail",
+                    },
+                    forward: { type: "string", description: "Email address to auto-forward matching mail to" },
+                  },
+                },
+              },
+              required: ["criteria", "action"],
+            },
+          },
+          {
+            name: "gmail_list_filters",
+            description: "List all existing Gmail filters.",
+            inputSchema: {
+              type: "object",
+              properties: {},
+              required: [],
+            },
+          },
+          {
+            name: "gmail_delete_filter",
+            description: "Delete a Gmail filter by ID.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                filterId: {
+                  type: "string",
+                  description: "The ID of the filter to delete (from gmail_create_filter or gmail_list_filters)",
+                },
+              },
+              required: ["filterId"],
             },
           },
 
@@ -4427,6 +4494,14 @@ export class GoogleWorkspaceMCPServer {
           };
         }
 
+        if (name === "gmail_create_filter") {
+          const { criteria, action } = GmailCreateFilterSchema.parse(args);
+          const result = await this.gmail!.createFilter(criteria, action);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
         if (name === "gmail_download_attachment") {
           const { messageId, attachmentId, filename, downloadDir, mimeType } = args as {
             messageId: string;
@@ -4447,6 +4522,13 @@ export class GoogleWorkspaceMCPServer {
           };
         }
 
+        if (name === "gmail_list_filters") {
+          const result = await this.gmail!.listFilters();
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
         if (name === "gmail_download_all_attachments") {
           const { messageId, downloadDir } = args as {
             messageId: string;
@@ -4455,6 +4537,14 @@ export class GoogleWorkspaceMCPServer {
           const result = await this.gmail!.downloadAllAttachments(messageId, downloadDir);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        if (name === "gmail_delete_filter") {
+          const { filterId } = args as { filterId: string };
+          await this.gmail!.deleteFilter(filterId);
+          return {
+            content: [{ type: "text", text: `Filter ${filterId} deleted.` }],
           };
         }
 
