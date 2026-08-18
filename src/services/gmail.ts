@@ -68,6 +68,30 @@ export interface GmailThread {
   messages?: GmailMessage[];
 }
 
+/**
+ * RFC 2047-encode a header value if it contains non-ASCII characters
+ * (e.g. em-dashes, umlauts, emoji). Without this, raw UTF-8 bytes in a
+ * header get misread as Latin-1 by mail clients, producing mojibake like
+ * "Ã¢Â€Â”" for an em-dash. Uses a single "B" (base64) encoded-word, which
+ * covers typical subject-line lengths; RFC 2047 caps each encoded-word at
+ * 75 chars, so extremely long non-ASCII subjects would need folding into
+ * multiple encoded-words — not implemented here, not needed for normal use.
+ */
+export function encodeHeaderValue(value: string): string {
+  let isAscii = true;
+  for (let i = 0; i < value.length; i++) {
+    if (value.charCodeAt(i) > 127) {
+      isAscii = false;
+      break;
+    }
+  }
+  if (isAscii) {
+    return value;
+  }
+  const encoded = Buffer.from(value, "utf8").toString("base64");
+  return `=?UTF-8?B?${encoded}?=`;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -349,7 +373,7 @@ export class GmailService {
   public async sendEmail(options: SendEmailOptions): Promise<GmailMessage> {
     const messageParts = [
       `To: ${headerValue(options.to)}`,
-      `Subject: ${headerValue(options.subject)}`,
+      `Subject: ${encodeHeaderValue(headerValue(options.subject))}`,
     ];
 
     if (options.cc) {
