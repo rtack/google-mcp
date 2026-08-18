@@ -347,6 +347,43 @@ describe("GmailService", () => {
       expect(mockMessagesSend).toHaveBeenCalled();
       expect(result.id).toBe("sent1");
     });
+
+    it("should RFC 2047-encode a non-ASCII subject instead of sending it raw", async () => {
+      mockMessagesSend.mockResolvedValue({
+        data: { id: "sent2", threadId: "t2" },
+      });
+      mockMessagesGet.mockResolvedValue({
+        data: {
+          id: "sent2",
+          threadId: "t2",
+          labelIds: ["SENT"],
+          payload: { headers: [{ name: "Subject", value: "Facts — Überraschung 😀" }] },
+        },
+      });
+
+      await service.sendEmail({
+        to: "recipient@example.com",
+        subject: "Facts — Überraschung 😀", // em-dash, umlaut, emoji
+        body: "Hello",
+      });
+
+      const sentRaw = mockMessagesSend.mock.calls[0][0].requestBody.raw as string;
+      const decoded = Buffer.from(
+        sentRaw.replace(/-/g, "+").replace(/_/g, "/"),
+        "base64",
+      ).toString("utf8");
+      const subjectLine = decoded.split("\r\n").find((l) => l.startsWith("Subject:"));
+
+      // The raw header line itself must be pure ASCII (an RFC 2047 encoded-word)
+      expect(subjectLine).toMatch(/^Subject: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=$/);
+
+      // And it must decode back to the original text — this is the actual bug:
+      // previously the raw UTF-8 bytes were dropped in unencoded, which mail
+      // clients then misread as Latin-1 (mojibake like "Ã¢Â€Â”" for an em-dash).
+      const encodedWord = subjectLine!.replace("Subject: =?UTF-8?B?", "").replace("?=", "");
+      const roundTripped = Buffer.from(encodedWord, "base64").toString("utf8");
+      expect(roundTripped).toBe("Facts — Überraschung 😀");
+    });
   });
 
   describe("trashMessage", () => {
