@@ -1581,6 +1581,82 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "gmail_add_labels",
+            description: "Add one or more labels to a single message. Use label IDs from gmail_list_labels (system labels like INBOX/STARRED/IMPORTANT/UNREAD also work). For the whole thread instead, use gmail_add_thread_labels.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                messageId: {
+                  type: "string",
+                  description: "The ID of the message",
+                },
+                labelIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Label IDs to add",
+                },
+              },
+              required: ["messageId", "labelIds"],
+            },
+          },
+          {
+            name: "gmail_remove_labels",
+            description: "Remove one or more labels from a single message. Use label IDs from gmail_list_labels (system labels like INBOX/STARRED/IMPORTANT/UNREAD also work — removing INBOX archives the message). For the whole thread instead, use gmail_remove_thread_labels.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                messageId: {
+                  type: "string",
+                  description: "The ID of the message",
+                },
+                labelIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Label IDs to remove",
+                },
+              },
+              required: ["messageId", "labelIds"],
+            },
+          },
+          {
+            name: "gmail_add_thread_labels",
+            description: "Add one or more labels to every message in a thread (including future replies). Use label IDs from gmail_list_labels (system labels like INBOX/STARRED/IMPORTANT/UNREAD also work).",
+            inputSchema: {
+              type: "object",
+              properties: {
+                threadId: {
+                  type: "string",
+                  description: "The ID of the thread",
+                },
+                labelIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Label IDs to add",
+                },
+              },
+              required: ["threadId", "labelIds"],
+            },
+          },
+          {
+            name: "gmail_remove_thread_labels",
+            description: "Remove one or more labels from every message in a thread (including future replies). Use label IDs from gmail_list_labels (system labels like INBOX/STARRED/IMPORTANT/UNREAD also work — removing INBOX archives the thread).",
+            inputSchema: {
+              type: "object",
+              properties: {
+                threadId: {
+                  type: "string",
+                  description: "The ID of the thread",
+                },
+                labelIds: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "Label IDs to remove",
+                },
+              },
+              required: ["threadId", "labelIds"],
+            },
+          },
+          {
             name: "gmail_search",
             description: "Search emails using Gmail search syntax.",
             inputSchema: {
@@ -4461,6 +4537,38 @@ export class GoogleWorkspaceMCPServer {
           await this.gmail!.markAsUnread(messageId);
           return {
             content: [{ type: "text", text: `Message ${messageId} marked as unread.` }],
+          };
+        }
+
+        if (name === "gmail_add_labels") {
+          const { messageId, labelIds } = args as { messageId: string; labelIds: string[] };
+          await this.gmail!.addLabels(messageId, labelIds);
+          return {
+            content: [{ type: "text", text: `Added labels [${labelIds.join(", ")}] to message ${messageId}.` }],
+          };
+        }
+
+        if (name === "gmail_remove_labels") {
+          const { messageId, labelIds } = args as { messageId: string; labelIds: string[] };
+          await this.gmail!.removeLabels(messageId, labelIds);
+          return {
+            content: [{ type: "text", text: `Removed labels [${labelIds.join(", ")}] from message ${messageId}.` }],
+          };
+        }
+
+        if (name === "gmail_add_thread_labels") {
+          const { threadId, labelIds } = args as { threadId: string; labelIds: string[] };
+          await this.gmail!.addLabelsToThread(threadId, labelIds);
+          return {
+            content: [{ type: "text", text: `Added labels [${labelIds.join(", ")}] to thread ${threadId}.` }],
+          };
+        }
+
+        if (name === "gmail_remove_thread_labels") {
+          const { threadId, labelIds } = args as { threadId: string; labelIds: string[] };
+          await this.gmail!.removeLabelsFromThread(threadId, labelIds);
+          return {
+            content: [{ type: "text", text: `Removed labels [${labelIds.join(", ")}] from thread ${threadId}.` }],
           };
         }
 

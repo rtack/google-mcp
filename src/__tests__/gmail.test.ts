@@ -20,6 +20,7 @@ const mockMessagesModify = vi.fn();
 const mockThreadsList = vi.fn();
 const mockThreadsGet = vi.fn();
 const mockThreadsTrash = vi.fn();
+const mockThreadsModify = vi.fn();
 const mockAttachmentsGet = vi.fn();
 const mockDraftsSend = vi.fn();
 const mockDraftsDelete = vi.fn();
@@ -53,6 +54,7 @@ vi.mock("googleapis", () => ({
           list: mockThreadsList,
           get: mockThreadsGet,
           trash: mockThreadsTrash,
+          modify: mockThreadsModify,
         },
         drafts: {
           send: mockDraftsSend,
@@ -680,6 +682,34 @@ describe("GmailService", () => {
       expect(mockThreadsTrash).toHaveBeenCalledWith({
         userId: "me",
         id: "t1",
+      });
+    });
+  });
+
+  describe("addLabelsToThread", () => {
+    it("should add labels to every message in a thread", async () => {
+      mockThreadsModify.mockResolvedValue({ data: {} });
+
+      await service.addLabelsToThread("t1", ["Label_1", "Label_2"]);
+
+      expect(mockThreadsModify).toHaveBeenCalledWith({
+        userId: "me",
+        id: "t1",
+        requestBody: { addLabelIds: ["Label_1", "Label_2"] },
+      });
+    });
+  });
+
+  describe("removeLabelsFromThread", () => {
+    it("should remove labels from every message in a thread", async () => {
+      mockThreadsModify.mockResolvedValue({ data: {} });
+
+      await service.removeLabelsFromThread("t1", ["INBOX"]);
+
+      expect(mockThreadsModify).toHaveBeenCalledWith({
+        userId: "me",
+        id: "t1",
+        requestBody: { removeLabelIds: ["INBOX"] },
       });
     });
   });
