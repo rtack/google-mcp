@@ -196,6 +196,29 @@ export class GmailService {
     };
   }
 
+  // Nested labels (e.g. "Discogs/ai_done") work automatically — Gmail treats
+  // the "/" as a hierarchy separator and creates parent labels as needed.
+  public async createLabel(name: string): Promise<GmailLabel> {
+    const response = await this.gmail.users.labels.create({
+      userId: "me",
+      requestBody: { name },
+    });
+    return {
+      id: response.data.id || "",
+      name: response.data.name || "",
+      type: response.data.type || undefined,
+      messagesTotal: response.data.messagesTotal || undefined,
+      messagesUnread: response.data.messagesUnread || undefined,
+    };
+  }
+
+  public async deleteLabel(labelId: string): Promise<void> {
+    await this.gmail.users.labels.delete({
+      userId: "me",
+      id: labelId,
+    });
+  }
+
   // Messages
 
   public async listMessages(options: {

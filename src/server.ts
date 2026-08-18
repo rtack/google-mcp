@@ -1413,6 +1413,34 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "gmail_create_label",
+            description: "Create a new Gmail label. Use \"/\" for nested labels (e.g. \"Discogs/ai_done\") — Gmail creates any missing parent labels automatically.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Label name, \"/\"-separated for nesting",
+                },
+              },
+              required: ["name"],
+            },
+          },
+          {
+            name: "gmail_delete_label",
+            description: "Delete a Gmail label by ID (from gmail_list_labels). Does not delete the messages carrying it.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                labelId: {
+                  type: "string",
+                  description: "The ID of the label to delete",
+                },
+              },
+              required: ["labelId"],
+            },
+          },
+          {
             name: "gmail_list_messages",
             description: "List Gmail messages with optional filtering.",
             inputSchema: {
@@ -4449,6 +4477,22 @@ export class GoogleWorkspaceMCPServer {
           const result = await this.gmail!.listLabels();
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        if (name === "gmail_create_label") {
+          const { name: labelName } = args as { name: string };
+          const result = await this.gmail!.createLabel(labelName);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+          };
+        }
+
+        if (name === "gmail_delete_label") {
+          const { labelId } = args as { labelId: string };
+          await this.gmail!.deleteLabel(labelId);
+          return {
+            content: [{ type: "text", text: `Label ${labelId} deleted.` }],
           };
         }
 

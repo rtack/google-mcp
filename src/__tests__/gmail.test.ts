@@ -10,6 +10,8 @@ vi.mock("os");
 const mockGetProfile = vi.fn();
 const mockLabelsList = vi.fn();
 const mockLabelsGet = vi.fn();
+const mockLabelsCreate = vi.fn();
+const mockLabelsDelete = vi.fn();
 const mockMessagesList = vi.fn();
 const mockMessagesGet = vi.fn();
 const mockMessagesSend = vi.fn();
@@ -37,6 +39,8 @@ vi.mock("googleapis", () => ({
         labels: {
           list: mockLabelsList,
           get: mockLabelsGet,
+          create: mockLabelsCreate,
+          delete: mockLabelsDelete,
         },
         messages: {
           list: mockMessagesList,
@@ -731,6 +735,36 @@ describe("GmailService", () => {
       expect(result.id).toBe("Label_1");
       expect(result.name).toBe("Work");
       expect(result.messagesTotal).toBe(50);
+    });
+  });
+
+  describe("createLabel", () => {
+    it("should create a label", async () => {
+      mockLabelsCreate.mockResolvedValue({
+        data: { id: "Label_2", name: "Discogs/ai_done", type: "user" },
+      });
+
+      const result = await service.createLabel("Discogs/ai_done");
+
+      expect(mockLabelsCreate).toHaveBeenCalledWith({
+        userId: "me",
+        requestBody: { name: "Discogs/ai_done" },
+      });
+      expect(result.id).toBe("Label_2");
+      expect(result.name).toBe("Discogs/ai_done");
+    });
+  });
+
+  describe("deleteLabel", () => {
+    it("should delete a label", async () => {
+      mockLabelsDelete.mockResolvedValue({ data: {} });
+
+      await service.deleteLabel("Label_2");
+
+      expect(mockLabelsDelete).toHaveBeenCalledWith({
+        userId: "me",
+        id: "Label_2",
+      });
     });
   });
 
