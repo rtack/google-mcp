@@ -106,7 +106,7 @@ Three-branch model (local to this checkout):
 Two distinct actions, two distinct terms — do not use them interchangeably:
 
 - **MR** = merging a `feat/<name>` branch into **`local-dev`** (Raphael's own fork/repo). A plain `git merge`, not a GitHub pull request object. **Gate: live-verified only** (a real MCP tool call against real Google APIs/data — green tests are necessary but not sufficient, see the Photos-feature history below). **No code review required** — it's Raphael's own local integration branch, reviewing your own local merge adds no value.
-- **PR** = a GitHub pull request opened against **`quinnjr/google-mcp`** (the external upstream repo). **Gate: everything MR requires, plus**: `README.md`'s tool table updated, and **code-reviewed** (e.g. `/code-review` on the branch diff, findings addressed or explicitly accepted) — this one matters because it's headed to someone else's repo for their review.
+- **PR** = a GitHub pull request opened against **`quinnjr/google-mcp`** (the external upstream repo). **Gate: everything MR requires, plus**: **code-reviewed** (e.g. `/code-review` on the branch diff, findings addressed or explicitly accepted) — this one matters because it's headed to someone else's repo for their review. (New/changed tools get documented in the brain vault's `pages/forked-repos.md`, not as a repo-side README requirement.)
 
 **Merging (MR) is approval-gated, not Claude-forbidden.** Claude may run `git merge` into `local-dev` — but only after: (1) the MR gate below is satisfied, (2) Claude has explicitly proposed *that specific merge* and stated the gate is satisfied, and (3) the owner has explicitly approved *that specific proposal* (approve/decline, not inferred from an earlier, related instruction). Never merge preemptively "since tests pass" or because a merge seems like the obvious next step — always propose first and wait. Opening a PR follows the same propose-then-approve pattern, at the PR gate.
 
@@ -116,7 +116,6 @@ Before an **MR** (merge into `local-dev`), confirm, then propose and wait for ap
 - [ ] Explicit, in-the-moment approval for *that specific merge*
 
 Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
-- [ ] `README.md`'s per-domain tool table updated if a tool was added/changed/removed
 - [ ] Code-reviewed (e.g. `/code-review` on the branch diff) — findings addressed or explicitly noted as accepted, not silently skipped
 - [ ] PR targets `quinnjr/google-mcp` (upstream), not the fork's own `main`, unless explicitly told otherwise
 - [ ] Explicit, in-the-moment approval for opening (not inferred from a related request)
@@ -129,7 +128,6 @@ A checklist item above is satisfied only when its evidence is pasted into that t
 - **`pnpm test` / `pnpm lint` clean** — paste the real summary line from the run (e.g. "Test Files 14 passed (14), Tests 276 passed (276)"; "0 errors, 200 warnings"), not a claim that it passed.
 - **Live-verified against the real API** — state the exact tool call made and its result. "Deferred" is not evidence of anything except that this item is unmet — say so plainly if it's the case, don't dress it up as satisfied.
 - **Explicit, in-the-moment approval** — quote the user's literal words that gave it; a paraphrase or an inference from an earlier, related turn doesn't count.
-- **(PR only) README table updated** — name the section/rows changed.
 - **(PR only) Code-reviewed** — name the method used (e.g. `/code-review` on the branch diff) and state findings addressed vs. explicitly accepted.
 
 This doesn't replace the checklists above — it's how each line gets satisfied. An item with no evidence blocks the merge/PR exactly like an unchecked one.
