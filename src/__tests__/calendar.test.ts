@@ -6,6 +6,8 @@ const mockCalendarListGet = vi.fn();
 const mockCalendarsInsert = vi.fn();
 const mockCalendarsPatch = vi.fn();
 const mockCalendarListPatch = vi.fn();
+const mockCalendarListInsert = vi.fn();
+const mockCalendarListDelete = vi.fn();
 const mockCalendarsDelete = vi.fn();
 const mockEventsList = vi.fn();
 const mockEventsGet = vi.fn();
@@ -27,6 +29,8 @@ vi.mock("googleapis", () => ({
         list: mockCalendarListList,
         get: mockCalendarListGet,
         patch: mockCalendarListPatch,
+        insert: mockCalendarListInsert,
+        delete: mockCalendarListDelete,
       },
       calendars: {
         insert: mockCalendarsInsert,
@@ -295,6 +299,40 @@ describe("CalendarService", () => {
 
       expect(mockCalendarsDelete).toHaveBeenCalledWith({
         calendarId: "cal-id@group.calendar.google.com",
+      });
+    });
+  });
+
+  describe("subscribeCalendar", () => {
+    it("should subscribe to an existing calendar by ID", async () => {
+      mockCalendarListInsert.mockResolvedValue({
+        data: {
+          id: "c_biplus@group.calendar.google.com",
+          summary: "Verein Bisexuell Schweiz",
+          accessRole: "reader",
+          selected: true,
+        },
+      });
+
+      const result = await service.subscribeCalendar("c_biplus@group.calendar.google.com");
+
+      expect(mockCalendarListInsert).toHaveBeenCalledWith({
+        requestBody: { id: "c_biplus@group.calendar.google.com" },
+      });
+      expect(result.id).toBe("c_biplus@group.calendar.google.com");
+      expect(result.summary).toBe("Verein Bisexuell Schweiz");
+      expect(result.accessRole).toBe("reader");
+    });
+  });
+
+  describe("unsubscribeCalendar", () => {
+    it("should unsubscribe from a calendar by ID", async () => {
+      mockCalendarListDelete.mockResolvedValue({});
+
+      await service.unsubscribeCalendar("c_biplus@group.calendar.google.com");
+
+      expect(mockCalendarListDelete).toHaveBeenCalledWith({
+        calendarId: "c_biplus@group.calendar.google.com",
       });
     });
   });
