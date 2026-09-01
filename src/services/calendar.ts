@@ -123,22 +123,7 @@ export class CalendarService {
       maxResults: 250,
     });
 
-    return (response.data.items || []).map((cal) => {
-      if (!cal.id) {
-        throw new Error("Calendar API returned a calendar list entry without an id.");
-      }
-      return {
-        id: cal.id,
-        summary: cal.summary || "",
-        description: cal.description || undefined,
-        timeZone: cal.timeZone || undefined,
-        primary: cal.primary || false,
-        accessRole: cal.accessRole || undefined,
-        backgroundColor: cal.backgroundColor || undefined,
-        foregroundColor: cal.foregroundColor || undefined,
-        selected: cal.selected || false,
-      };
-    });
+    return (response.data.items || []).map((cal) => this.formatCalendarInfo(cal));
   }
 
   public async getCalendar(calendarId: string): Promise<CalendarInfo> {
@@ -146,17 +131,7 @@ export class CalendarService {
       calendarId,
     });
 
-    return {
-      id: response.data.id ?? calendarId,
-      summary: response.data.summary || "",
-      description: response.data.description || undefined,
-      timeZone: response.data.timeZone || undefined,
-      primary: response.data.primary || false,
-      accessRole: response.data.accessRole || undefined,
-      backgroundColor: response.data.backgroundColor || undefined,
-      foregroundColor: response.data.foregroundColor || undefined,
-      selected: response.data.selected || false,
-    };
+    return this.formatCalendarInfo(response.data);
   }
 
   public async createCalendar(options: CalendarCreateOptions): Promise<CalendarInfo> {
@@ -283,24 +258,17 @@ export class CalendarService {
       requestBody: { id: calendarId },
     });
 
-    return {
-      id: response.data.id!,
-      summary: response.data.summary || "",
-      description: response.data.description || undefined,
-      timeZone: response.data.timeZone || undefined,
-      primary: response.data.primary || false,
-      accessRole: response.data.accessRole || undefined,
-      backgroundColor: response.data.backgroundColor || undefined,
-      foregroundColor: response.data.foregroundColor || undefined,
-      selected: response.data.selected || false,
-    };
+    return this.formatCalendarInfo(response.data);
   }
 
   /**
-   * Removes a calendar the user subscribed to (via subscribeCalendar or
-   * the Google Calendar UI) from their calendarList. Only unsubscribes —
-   * has no effect on calendars the user owns, and never deletes the
-   * calendar itself or its events for anyone else.
+   * Removes a calendar from the user's own calendarList — the "unsubscribe"
+   * action in the Calendar UI. For a calendar the user doesn't own, this is
+   * a true unsubscribe with no side effects elsewhere. For a calendar the
+   * user *does* own, calendarList.delete still removes it from their own
+   * list/UI (though not from other users it's shared with, and not
+   * permanently — re-subscribing via subscribeCalendar restores it); use
+   * deleteCalendar instead to actually delete an owned calendar.
    */
   public async unsubscribeCalendar(calendarId: string): Promise<void> {
     await this.calendar.calendarList.delete({ calendarId });
@@ -536,6 +504,23 @@ export class CalendarService {
     });
 
     return events;
+  }
+
+  private formatCalendarInfo(entry: calendar_v3.Schema$CalendarListEntry): CalendarInfo {
+    if (!entry.id) {
+      throw new Error("Calendar API returned a calendar list entry without an id.");
+    }
+    return {
+      id: entry.id,
+      summary: entry.summary || "",
+      description: entry.description || undefined,
+      timeZone: entry.timeZone || undefined,
+      primary: entry.primary || false,
+      accessRole: entry.accessRole || undefined,
+      backgroundColor: entry.backgroundColor || undefined,
+      foregroundColor: entry.foregroundColor || undefined,
+      selected: entry.selected || false,
+    };
   }
 
   private formatEvent(event: calendar_v3.Schema$Event): CalendarEvent {

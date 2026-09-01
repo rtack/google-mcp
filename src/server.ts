@@ -1199,7 +1199,7 @@ export class GoogleWorkspaceMCPServer {
           {
             name: "calendar_unsubscribe",
             description:
-              "Unsubscribe from a calendar previously subscribed to (via calendar_subscribe or the Calendar UI) — removes it from your calendar list only. Has no effect on calendars you own, and never deletes the calendar or its events for anyone else.",
+              "Remove a calendar from your own calendar list — the 'unsubscribe' action in the Calendar UI. For a calendar you don't own, this is a true unsubscribe with no other effects. For a calendar you DO own, this still hides it from your own list/UI (though it stays intact for anyone it's shared with, and re-subscribing via calendar_subscribe restores it) — use calendar_delete instead to actually delete an owned calendar.",
             inputSchema: {
               type: "object",
               properties: {
