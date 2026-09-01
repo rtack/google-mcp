@@ -217,6 +217,45 @@ describe("CalendarService", () => {
       );
       expect(result.selected).toBe(false);
     });
+
+    it("should retry on a rate-limit error and eventually succeed", async () => {
+      const rateLimitError = Object.assign(new Error("Rate Limit Exceeded"), { code: 429 });
+      mockCalendarListPatch
+        .mockRejectedValueOnce(rateLimitError)
+        .mockRejectedValueOnce(rateLimitError)
+        .mockResolvedValueOnce({ data: { id: "work", summary: "Work", selected: true } });
+
+      vi.useFakeTimers();
+      const resultPromise = service.setCalendarSelected("work", true);
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+      vi.useRealTimers();
+
+      expect(mockCalendarListPatch).toHaveBeenCalledTimes(3);
+      expect(result.selected).toBe(true);
+    });
+
+    it("should not retry a non-rate-limit error", async () => {
+      const authError = Object.assign(new Error("invalid_grant"), { code: 401 });
+      mockCalendarListPatch.mockRejectedValue(authError);
+
+      await expect(service.setCalendarSelected("work", true)).rejects.toThrow("invalid_grant");
+      expect(mockCalendarListPatch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should give up after repeated rate-limit errors", async () => {
+      const rateLimitError = Object.assign(new Error("Rate Limit Exceeded"), { code: 429 });
+      mockCalendarListPatch.mockRejectedValue(rateLimitError);
+
+      vi.useFakeTimers();
+      const resultPromise = service.setCalendarSelected("work", true);
+      const assertion = expect(resultPromise).rejects.toThrow("Rate Limit Exceeded");
+      await vi.runAllTimersAsync();
+      await assertion;
+      vi.useRealTimers();
+
+      expect(mockCalendarListPatch).toHaveBeenCalledTimes(5);
+    });
   });
 
   describe("applySelection", () => {
@@ -246,6 +285,58 @@ describe("CalendarService", () => {
       expect(mockCalendarListPatch).toHaveBeenCalledWith(
         expect.objectContaining({ calendarId: "wcs", requestBody: { selected: true } })
       );
+      expect(result.find((c) => c.id === "primary")?.selected).toBe(true);
+      expect(result.find((c) => c.id === "work")?.selected).toBe(false);
+    });
+
+    it("should cap concurrent patch calls instead of firing them all at once", async () => {
+      const calendars = Array.from({ length: 12 }, (_, i) => ({ id: `cal-${i}`, summary: `Cal ${i}` }));
+      mockCalendarListList.mockResolvedValue({ data: { items: calendars } });
+
+      let inFlight = 0;
+      let maxInFlight = 0;
+      mockCalendarListPatch.mockImplementation(({ calendarId, requestBody }) => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            inFlight--;
+            resolve({ data: { id: calendarId, summary: calendarId, selected: requestBody.selected } });
+          }, 10);
+        });
+      });
+
+      vi.useFakeTimers();
+      const resultPromise = service.applySelection(["cal-0"]);
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+      vi.useRealTimers();
+
+      expect(result).toHaveLength(12);
+      expect(maxInFlight).toBeGreaterThan(1);
+      expect(maxInFlight).toBeLessThanOrEqual(5);
+    });
+
+    it("should transparently retry a rate-limited patch within a batch", async () => {
+      const calendars = [
+        { id: "primary", summary: "Primary" },
+        { id: "work", summary: "Work" },
+      ];
+      mockCalendarListList.mockResolvedValue({ data: { items: calendars } });
+      const rateLimitError = Object.assign(new Error("Rate Limit Exceeded"), { code: 429 });
+      mockCalendarListPatch
+        .mockImplementationOnce(() => Promise.reject(rateLimitError))
+        .mockImplementation(({ calendarId, requestBody }) =>
+          Promise.resolve({ data: { id: calendarId, summary: calendarId, selected: requestBody.selected } })
+        );
+
+      vi.useFakeTimers();
+      const resultPromise = service.applySelection(["primary"]);
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+      vi.useRealTimers();
+
+      expect(mockCalendarListPatch).toHaveBeenCalledTimes(3);
       expect(result.find((c) => c.id === "primary")?.selected).toBe(true);
       expect(result.find((c) => c.id === "work")?.selected).toBe(false);
     });

@@ -109,6 +109,74 @@ export interface EventUpdateOptions {
   colorId?: string;
 }
 
+/**
+ * True when a Google API error indicates the request was rate-limited.
+ * `calendarList.patch` bursts trip this reliably once more than a handful
+ * of calendars are updated at once (see applySelection below).
+ */
+function isRateLimitError(err: unknown): boolean {
+  const anyErr = err as {
+    code?: number;
+    response?: { status?: number };
+    errors?: Array<{ reason?: string }>;
+    message?: string;
+  };
+  if (anyErr?.code === 429 || anyErr?.response?.status === 429) return true;
+  if (
+    anyErr?.errors?.some(
+      (e) =>
+        e.reason === "rateLimitExceeded" ||
+        e.reason === "userRateLimitExceeded" ||
+        e.reason === "quotaExceeded"
+    )
+  ) {
+    return true;
+  }
+  return /rate limit exceeded/i.test(anyErr?.message ?? "");
+}
+
+/**
+ * Retry `fn` with exponential backoff + jitter when it fails with a
+ * rate-limit error. Any other error is thrown immediately, unretried.
+ */
+async function withRateLimitRetry<T>(fn: () => Promise<T>, maxAttempts = 5): Promise<T> {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await fn();
+    } catch (err) {
+      attempt++;
+      if (attempt >= maxAttempts || !isRateLimitError(err)) throw err;
+      const backoffMs = 2 ** attempt * 250 + Math.random() * 250;
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+}
+
+/**
+ * Run `fn` over `items` with at most `limit` calls in flight at once, so a
+ * large batch (e.g. applySelection reconciling every calendar) doesn't fire
+ * one request per item simultaneously and trip Google's per-user rate limit.
+ */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await fn(items[index]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 export class CalendarService {
   private readonly calendar: calendar_v3.Calendar;
 
@@ -182,10 +250,12 @@ export class CalendarService {
    * whether its events currently show up in views.
    */
   public async setCalendarSelected(calendarId: string, selected: boolean): Promise<CalendarInfo> {
-    const response = await this.calendar.calendarList.patch({
-      calendarId,
-      requestBody: { selected },
-    });
+    const response = await withRateLimitRetry(() =>
+      this.calendar.calendarList.patch({
+        calendarId,
+        requestBody: { selected },
+      })
+    );
 
     return {
       id: response.data.id!,
@@ -197,14 +267,17 @@ export class CalendarService {
   /**
    * Reconcile the selection state of every calendar in the user's list to
    * match `selectedIds` exactly: those get selected: true, every other
-   * calendar gets selected: false. Patches run in parallel.
+   * calendar gets selected: false. Patches run with limited concurrency
+   * (and per-patch retry/backoff via setCalendarSelected) rather than all
+   * at once — a full Promise.all burst reliably trips Google's per-user
+   * rate limit once there are more than a handful of calendars.
    */
   public async applySelection(selectedIds: string[]): Promise<CalendarInfo[]> {
     const wanted = new Set(selectedIds);
     const calendars = await this.listCalendars();
 
-    return Promise.all(
-      calendars.map((cal) => this.setCalendarSelected(cal.id, wanted.has(cal.id)))
+    return mapWithConcurrency(calendars, 5, (cal) =>
+      this.setCalendarSelected(cal.id, wanted.has(cal.id))
     );
   }
 
