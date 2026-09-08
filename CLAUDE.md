@@ -117,7 +117,7 @@ Before an **MR** (merge into `local-dev`), confirm, then propose and wait for ap
 
 Before a **PR** (against `quinnjr/google-mcp`), confirm all of the above, plus:
 - [ ] Code-reviewed (e.g. `/code-review` on the branch diff) — findings addressed or explicitly noted as accepted, not silently skipped
-- [ ] Diff shown to Raphael for his own review (link to the branch on GitHub, or the diff pasted inline) — a separate explicit go on the diff itself, after code-review findings are addressed but before push/PR-open. Distinct from approval to open the PR: an earlier "go ahead and open the PR" does not stand in for this — the code-review agent's findings summary is not the diff either.
+- [ ] Diff shown to Raphael for his own review — a GitHub **compare** URL (`https://github.com/<owner>/<repo>/compare/<base>...<branch>`, e.g. against `quinnjr/google-mcp`'s `main`), not a bare branch/tree link (that shows the branch's files, not a diff) — or the diff pasted inline. A separate explicit go on the diff itself, after code-review findings are addressed but before push/PR-open. Distinct from approval to open the PR: an earlier "go ahead and open the PR" does not stand in for this — the code-review agent's findings summary is not the diff either.
 - [ ] PR targets `quinnjr/google-mcp` (upstream), not the fork's own `main`, unless explicitly told otherwise
 - [ ] Explicit, in-the-moment approval for opening (not inferred from a related request)
 
