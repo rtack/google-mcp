@@ -588,6 +588,79 @@ describe("GmailService", () => {
       const roundTripped = Buffer.from(encodedWord, "base64").toString("utf8");
       expect(roundTripped).toBe("Facts — Überraschung 😀");
     });
+
+    it("should build a multipart/mixed message with attachments", async () => {
+      mockMessagesSend.mockResolvedValue({ data: { id: "sent3", threadId: "t3" } });
+      mockMessagesGet.mockResolvedValue({
+        data: { id: "sent3", threadId: "t3", payload: { headers: [] } },
+      });
+      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from("%PDF-fake-content"));
+
+      await service.sendEmail({
+        to: "recipient@example.com",
+        subject: "Docs attached",
+        body: "See attached.",
+        attachments: ["/tmp/report.pdf"],
+      });
+
+      expect(fs.readFileSync).toHaveBeenCalledWith("/tmp/report.pdf");
+
+      const sentRaw = mockMessagesSend.mock.calls[0][0].requestBody.raw as string;
+      const decoded = Buffer.from(
+        sentRaw.replace(/-/g, "+").replace(/_/g, "/"),
+        "base64",
+      ).toString("utf8");
+
+      expect(decoded).toContain("Content-Type: multipart/mixed; boundary=");
+      expect(decoded).toContain('Content-Type: application/pdf; name="report.pdf"');
+      expect(decoded).toContain('Content-Disposition: attachment; filename="report.pdf"');
+      expect(decoded).toContain("Content-Transfer-Encoding: base64");
+      expect(decoded).toContain(Buffer.from("%PDF-fake-content").toString("base64"));
+      expect(decoded).toContain("See attached.");
+    });
+
+    it("should send multiple attachments as separate MIME parts", async () => {
+      mockMessagesSend.mockResolvedValue({ data: { id: "sent4", threadId: "t4" } });
+      mockMessagesGet.mockResolvedValue({
+        data: { id: "sent4", threadId: "t4", payload: { headers: [] } },
+      });
+      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from("data"));
+
+      await service.sendEmail({
+        to: "recipient@example.com",
+        subject: "Two files",
+        body: "Both attached.",
+        attachments: ["/tmp/a.pdf", "/tmp/b.csv"],
+      });
+
+      const sentRaw = mockMessagesSend.mock.calls[0][0].requestBody.raw as string;
+      const decoded = Buffer.from(
+        sentRaw.replace(/-/g, "+").replace(/_/g, "/"),
+        "base64",
+      ).toString("utf8");
+
+      expect(decoded).toContain('filename="a.pdf"');
+      expect(decoded).toContain('filename="b.csv"');
+      expect(decoded).toContain("Content-Type: application/pdf");
+      expect(decoded).toContain("Content-Type: text/csv");
+    });
+
+    it("should propagate an error for a missing/unreadable attachment", async () => {
+      vi.mocked(fs.readFileSync).mockImplementation(() => {
+        throw new Error("ENOENT: no such file or directory");
+      });
+
+      await expect(
+        service.sendEmail({
+          to: "recipient@example.com",
+          subject: "Broken",
+          body: "x",
+          attachments: ["/tmp/does-not-exist.pdf"],
+        }),
+      ).rejects.toThrow("ENOENT");
+
+      expect(mockMessagesSend).not.toHaveBeenCalled();
+    });
   });
 
   describe("attachments", () => {
