@@ -7,6 +7,8 @@ import type { Auth } from "googleapis";
 const mockGetProfile = vi.fn();
 const mockLabelsList = vi.fn();
 const mockLabelsGet = vi.fn();
+const mockLabelsCreate = vi.fn();
+const mockLabelsDelete = vi.fn();
 const mockMessagesList = vi.fn();
 const mockMessagesGet = vi.fn();
 const mockMessagesSend = vi.fn();
@@ -18,6 +20,7 @@ const mockThreadsList = vi.fn();
 const mockThreadsGet = vi.fn();
 const mockThreadsTrash = vi.fn();
 const mockAttachmentsGet = vi.fn();
+const mockThreadsModify = vi.fn();
 
 vi.mock("googleapis", () => ({
   google: {
@@ -27,6 +30,8 @@ vi.mock("googleapis", () => ({
         labels: {
           list: mockLabelsList,
           get: mockLabelsGet,
+          create: mockLabelsCreate,
+          delete: mockLabelsDelete,
         },
         messages: {
           list: mockMessagesList,
@@ -42,6 +47,7 @@ vi.mock("googleapis", () => ({
           list: mockThreadsList,
           get: mockThreadsGet,
           trash: mockThreadsTrash,
+          modify: mockThreadsModify,
         },
       },
     }),
@@ -1246,6 +1252,34 @@ describe("GmailService", () => {
     });
   });
 
+  describe("addLabelsToThread", () => {
+    it("should add labels to every message in a thread", async () => {
+      mockThreadsModify.mockResolvedValue({ data: {} });
+
+      await service.addLabelsToThread("t1", ["Label_1", "Label_2"]);
+
+      expect(mockThreadsModify).toHaveBeenCalledWith({
+        userId: "me",
+        id: "t1",
+        requestBody: { addLabelIds: ["Label_1", "Label_2"] },
+      });
+    });
+  });
+
+  describe("removeLabelsFromThread", () => {
+    it("should remove labels from every message in a thread", async () => {
+      mockThreadsModify.mockResolvedValue({ data: {} });
+
+      await service.removeLabelsFromThread("t1", ["INBOX"]);
+
+      expect(mockThreadsModify).toHaveBeenCalledWith({
+        userId: "me",
+        id: "t1",
+        requestBody: { removeLabelIds: ["INBOX"] },
+      });
+    });
+  });
+
   describe("getLabel", () => {
     it("should get label by ID", async () => {
       mockLabelsGet.mockResolvedValue({
@@ -1284,6 +1318,36 @@ describe("GmailService", () => {
 
       expect(decoded).toContain("Subject: Hi Bcc: attacker@evil.com");
       expect(decoded).not.toMatch(/^Bcc: attacker@evil\.com$/m);
+    });
+  });
+
+  describe("createLabel", () => {
+    it("should create a label", async () => {
+      mockLabelsCreate.mockResolvedValue({
+        data: { id: "Label_2", name: "Discogs/ai_done", type: "user" },
+      });
+
+      const result = await service.createLabel("Discogs/ai_done");
+
+      expect(mockLabelsCreate).toHaveBeenCalledWith({
+        userId: "me",
+        requestBody: { name: "Discogs/ai_done" },
+      });
+      expect(result.id).toBe("Label_2");
+      expect(result.name).toBe("Discogs/ai_done");
+    });
+  });
+
+  describe("deleteLabel", () => {
+    it("should delete a label", async () => {
+      mockLabelsDelete.mockResolvedValue({ data: {} });
+
+      await service.deleteLabel("Label_2");
+
+      expect(mockLabelsDelete).toHaveBeenCalledWith({
+        userId: "me",
+        id: "Label_2",
+      });
     });
   });
 

@@ -282,6 +282,12 @@ pass `savePath` for anything larger, up to 25 MB.
 | `gmail_search` | Search emails |
 | `gmail_get_unread` | Get unread emails |
 | `gmail_get_thread` | Get email thread |
+| `gmail_create_label` | Create a new Gmail label (nested labels via "/") |
+| `gmail_delete_label` | Delete a Gmail label by ID |
+| `gmail_add_labels` | Add one or more labels to a single message |
+| `gmail_remove_labels` | Remove one or more labels from a single message |
+| `gmail_add_thread_labels` | Add labels to every message in a thread |
+| `gmail_remove_thread_labels` | Remove labels from every message in a thread |
 
 ### Google Contacts
 | Tool | Description |

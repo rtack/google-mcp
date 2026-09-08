@@ -298,6 +298,29 @@ export class GmailService {
     };
   }
 
+  // Nested labels (e.g. "Discogs/ai_done") work automatically — Gmail treats
+  // the "/" as a hierarchy separator and creates parent labels as needed.
+  public async createLabel(name: string): Promise<GmailLabel> {
+    const response = await this.gmail.users.labels.create({
+      userId: "me",
+      requestBody: { name },
+    });
+    return {
+      id: response.data.id || "",
+      name: response.data.name || "",
+      type: response.data.type || undefined,
+      messagesTotal: response.data.messagesTotal || undefined,
+      messagesUnread: response.data.messagesUnread || undefined,
+    };
+  }
+
+  public async deleteLabel(labelId: string): Promise<void> {
+    await this.gmail.users.labels.delete({
+      userId: "me",
+      id: labelId,
+    });
+  }
+
   // Messages
 
   public async listMessages(options: {
@@ -615,6 +638,29 @@ export class GmailService {
     await this.gmail.users.threads.trash({
       userId: "me",
       id: threadId,
+    });
+  }
+
+  // Applies to every message currently in the thread, unlike
+  // addLabels/removeLabels above which target one message only — mirrors
+  // messages.modify's addLabelIds/removeLabelIds but via threads.modify.
+  public async addLabelsToThread(threadId: string, labelIds: string[]): Promise<void> {
+    await this.gmail.users.threads.modify({
+      userId: "me",
+      id: threadId,
+      requestBody: {
+        addLabelIds: labelIds,
+      },
+    });
+  }
+
+  public async removeLabelsFromThread(threadId: string, labelIds: string[]): Promise<void> {
+    await this.gmail.users.threads.modify({
+      userId: "me",
+      id: threadId,
+      requestBody: {
+        removeLabelIds: labelIds,
+      },
     });
   }
 
