@@ -715,9 +715,9 @@ export class GmailService {
     });
   }
 
-  // Applies to every message in the thread (including future replies added to
-  // it), unlike addLabels/removeLabels above which target one message only —
-  // mirrors messages.modify's addLabels/removeLabels but via threads.modify.
+  // Applies to every message currently in the thread, unlike
+  // addLabels/removeLabels above which target one message only — mirrors
+  // messages.modify's addLabelIds/removeLabelIds but via threads.modify.
   public async addLabelsToThread(threadId: string, labelIds: string[]): Promise<void> {
     await this.gmail.users.threads.modify({
       userId: "me",
