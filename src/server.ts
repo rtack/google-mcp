@@ -3,7 +3,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse, Server as HttpServer } from "node:http";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -5786,6 +5786,13 @@ export class GoogleWorkspaceMCPServer {
     const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
       const url = new URL(req.url ?? "/", `http://${req.headers.host ?? host}`);
 
+      if (url.pathname === "/health") {
+        res
+          .writeHead(200, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ name: "google-mcp", pid: process.pid }));
+        return;
+      }
+
       if (url.pathname === "/mcp") {
         const header = req.headers["mcp-session-id"];
         const sessionId = Array.isArray(header) ? header[0] : header;
@@ -5869,12 +5876,102 @@ export class GoogleWorkspaceMCPServer {
       res.writeHead(404).end("Not found");
     });
 
-    await new Promise<void>((resolve) => {
-      httpServer.listen(port, host, () => resolve());
-    });
+    await bindOrExplain(httpServer, host, port);
+
+    const shutdown = (signal: NodeJS.Signals): void => {
+      console.error(`Received ${signal}, shutting down Google MCP Server...`);
+      httpServer.close(() => process.exit(0));
+      // close() waits for existing connections (SSE streams are long-lived and
+      // would otherwise hang it indefinitely) — force them closed right away,
+      // plus a hard fallback in case something still doesn't unwind in time.
+      httpServer.closeAllConnections();
+      setTimeout(() => process.exit(0), 2000).unref();
+    };
+    process.once("SIGTERM", shutdown);
+    process.once("SIGINT", shutdown);
 
     console.error(`Google MCP Server running on Streamable HTTP at http://${host}:${port}/mcp`);
     console.error(`  Legacy SSE endpoint: http://${host}:${port}/sse`);
+  }
+}
+
+/**
+ * Probes `GET /health` on a port that's already bound by someone else, to
+ * tell "another google-mcp pooled worker is already up" apart from "some
+ * unrelated (or stale) process holds this port." Returns null if nothing
+ * answers within the timeout, or the response isn't parseable JSON.
+ */
+async function identifyPeer(host: string, port: number): Promise<{ name?: string; pid?: number } | null> {
+  try {
+    const response = await fetch(`http://${host}:${port}/health`, {
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as { name?: string; pid?: number };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Binds `httpServer` to `host:port`, diagnosing a failure before giving up
+ * instead of letting Node's unhandled 'error' event crash the process with
+ * a bare stack trace and no indication of what to actually do about it.
+ *
+ * A duplicate instance hitting an already-running, healthy pooled worker is
+ * treated as benign (exit 0, quiet) — that's expected when more than one
+ * process races to start it. Anything else (a stale orphaned process, an
+ * unrelated program already on that port) gets a specific, actionable
+ * message: what's wrong and the exact command to find and clear it.
+ */
+async function bindOrExplain(httpServer: HttpServer, host: string, port: number): Promise<void> {
+  const bind = new Promise<void>((resolve, reject) => {
+    const onError = (error: NodeJS.ErrnoException): void => {
+      httpServer.removeListener("listening", onListening);
+      reject(error);
+    };
+    const onListening = (): void => {
+      httpServer.removeListener("error", onError);
+      resolve();
+    };
+    httpServer.once("error", onError);
+    httpServer.once("listening", onListening);
+    httpServer.listen(port, host);
+  });
+
+  try {
+    await bind;
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code !== "EADDRINUSE") {
+      console.error(`Failed to start Google MCP Server on ${host}:${port}: ${err.message}`);
+      process.exit(1);
+    }
+
+    const peer = await identifyPeer(host, port);
+    if (peer?.name === "google-mcp") {
+      console.error(
+        [
+          `Google MCP Server already running on http://${host}:${port} (pid ${peer.pid ?? "unknown"}).`,
+          "That instance keeps serving every connected client; this process will exit.",
+        ].join("\n")
+      );
+      process.exit(0);
+    }
+
+    console.error(
+      [
+        `Cannot start: port ${port} on ${host} is already in use.`,
+        peer === null
+          ? "It's not answering as a google-mcp instance — likely a stale or unrelated process."
+          : "It answered, but not as google-mcp — likely an unrelated process on this port.",
+        "Find and stop it, then retry:",
+        `  lsof -nP -iTCP:${port} -sTCP:LISTEN`,
+        "  kill <pid from that output>",
+        "Or set GOOGLE_MCP_PORT to run this server on a different port.",
+      ].join("\n")
+    );
+    process.exit(1);
   }
 }
 
