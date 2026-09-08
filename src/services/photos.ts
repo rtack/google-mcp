@@ -71,20 +71,12 @@ export class PhotosService {
   public async uploadMediaItem(options: PhotosUploadOptions): Promise<PhotosUploadResult> {
     const { mimeType, description } = options;
 
-    // resolveFileSource defaults an unnamed inline upload to "attachment"
-    // rather than throwing — fine for a mail attachment, but a real filename
-    // matters more here since it's what shows up as the item's name in
-    // Photos. The Zod schema at the tool boundary already requires this;
-    // re-check here too so a direct PhotosService caller gets the same
-    // guarantee.
+    // Unlike resolveFileSource's own "attachment" fallback, a real filename
+    // matters here since it's what shows up as the item's name in Photos.
     if (options.content && !options.filename) {
       throw new Error("filename is required when uploading via content");
     }
 
-    // filePath is model-suppliable and this server holds valid Google
-    // credentials — an injected "upload ~/.ssh/id_rsa" would otherwise be a
-    // real exfiltration path. resolveFileSource confines it to the sandbox
-    // root, rejects symlinks, and caps the size, same as Gmail/Drive.
     const { data: buffer, filename } = await resolveFileSource(
       { content: options.content, path: options.filePath, filename: options.filename },
       "base64",
