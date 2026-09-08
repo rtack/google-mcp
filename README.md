@@ -53,6 +53,9 @@ A comprehensive Model Context Protocol (MCP) server for Google integration, prov
 - Create folders
 - Rename files
 
+### Google Photos
+- Upload new photos/videos to the library
+
 ### Google Docs
 - Create new documents with optional initial content
 - Read document content
@@ -125,6 +128,7 @@ Before using this server, you need to set up Google Cloud credentials:
    - Google Forms API
    - Google Chat API
    - Google Meet REST API
+   - Photos Library API
 
 ### 2. Create OAuth 2.0 Credentials
 
@@ -307,6 +311,11 @@ pass `savePath` for anything larger, up to 25 MB.
 | `drive_move_file` | Move file to folder |
 | `drive_copy_file` | Copy a file |
 | `drive_rename_file` | Rename a file |
+
+### Google Photos
+| Tool | Description |
+|------|-------------|
+| `photos_upload_media_item` | Upload a new photo/video from base64 content or a local filePath |
 
 ### Google Docs
 | Tool | Description |
