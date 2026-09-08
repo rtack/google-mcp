@@ -282,6 +282,9 @@ pass `savePath` for anything larger, up to 25 MB.
 | `gmail_search` | Search emails |
 | `gmail_get_unread` | Get unread emails |
 | `gmail_get_thread` | Get email thread |
+| `gmail_create_filter` | Create a real Gmail filter (persists in Settings > Filters) |
+| `gmail_list_filters` | List all existing Gmail filters |
+| `gmail_delete_filter` | Delete a Gmail filter by ID |
 
 ### Google Contacts
 | Tool | Description |

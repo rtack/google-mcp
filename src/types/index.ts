@@ -131,6 +131,29 @@ export interface TaskUpdateOptions {
 }
 
 // Zod Schemas for validation
+export const GmailFilterCriteriaSchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+  subject: z.string().optional(),
+  query: z.string().optional(),
+  negatedQuery: z.string().optional(),
+  hasAttachment: z.boolean().optional(),
+  excludeChats: z.boolean().optional(),
+  size: z.number().optional(),
+  sizeComparison: z.enum(["smaller", "larger", "unspecified"]).optional(),
+});
+
+export const GmailFilterActionSchema = z.object({
+  addLabelIds: z.array(z.string()).optional(),
+  removeLabelIds: z.array(z.string()).optional(),
+  forward: z.string().optional(),
+});
+
+export const GmailCreateFilterSchema = z.object({
+  criteria: GmailFilterCriteriaSchema,
+  action: GmailFilterActionSchema,
+});
+
 export const DriveListOptionsSchema = z.object({
   pageSize: z.number().min(1).max(1000).optional().default(50),
   pageToken: z.string().optional(),
