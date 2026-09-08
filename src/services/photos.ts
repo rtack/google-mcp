@@ -1,13 +1,15 @@
 import type { Auth } from "googleapis";
-import * as fs from "fs";
-import * as path from "path";
+import { resolveFileSource } from "./attachments.js";
 
 const PHOTOS_API_BASE = "https://photoslibrary.googleapis.com/v1";
 
 export interface PhotosUploadOptions {
-  content?: string; // base64-encoded bytes; exactly one of content/filePath is required
+  /** Base64-encoded bytes. Mutually exclusive with `filePath`. */
+  content?: string;
+  /** Local file to read, resolved inside the sandbox root (see attachments.ts). */
   filePath?: string;
-  filename?: string; // required with content; defaults to path.basename(filePath) otherwise
+  /** Required with `content`; defaults to the file's basename with `filePath`. */
+  filename?: string;
   mimeType: string;
   description?: string;
 }
@@ -67,23 +69,27 @@ export class PhotosService {
   }
 
   public async uploadMediaItem(options: PhotosUploadOptions): Promise<PhotosUploadResult> {
-    const { content, filePath, mimeType, description } = options;
+    const { mimeType, description } = options;
 
-    let buffer: Buffer;
-    let filename: string;
-
-    if (filePath) {
-      buffer = fs.readFileSync(filePath);
-      filename = options.filename || path.basename(filePath);
-    } else if (content) {
-      if (!options.filename) {
-        throw new Error("filename is required when uploading via content");
-      }
-      buffer = Buffer.from(content, "base64");
-      filename = options.filename;
-    } else {
-      throw new Error("Either content or filePath must be provided");
+    // resolveFileSource defaults an unnamed inline upload to "attachment"
+    // rather than throwing — fine for a mail attachment, but a real filename
+    // matters more here since it's what shows up as the item's name in
+    // Photos. The Zod schema at the tool boundary already requires this;
+    // re-check here too so a direct PhotosService caller gets the same
+    // guarantee.
+    if (options.content && !options.filename) {
+      throw new Error("filename is required when uploading via content");
     }
+
+    // filePath is model-suppliable and this server holds valid Google
+    // credentials — an injected "upload ~/.ssh/id_rsa" would otherwise be a
+    // real exfiltration path. resolveFileSource confines it to the sandbox
+    // root, rejects symlinks, and caps the size, same as Gmail/Drive.
+    const { data: buffer, filename } = await resolveFileSource(
+      { content: options.content, path: options.filePath, filename: options.filename },
+      "base64",
+      "photos upload"
+    );
 
     const uploadToken = await this.uploadBytes(buffer, filename, mimeType);
 

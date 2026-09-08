@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { Auth } from "googleapis";
-import * as fs from "fs";
 import { PhotosService } from "../services/photos.js";
-
-vi.mock("fs");
 
 describe("PhotosService", () => {
   let service: PhotosService;
@@ -94,44 +94,6 @@ describe("PhotosService", () => {
       });
     });
 
-    it("should read bytes from filePath and derive the filename from its basename", async () => {
-      mockUploadAndCreateSucceed();
-      const mockFetch = vi.mocked(fetch);
-      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from("bytes from disk"));
-
-      const result = await service.uploadMediaItem({
-        filePath: "/Users/rtack/Downloads/google-mcp/gmail/scan.png",
-        mimeType: "image/png",
-      });
-
-      expect(fs.readFileSync).toHaveBeenCalledWith(
-        "/Users/rtack/Downloads/google-mcp/gmail/scan.png"
-      );
-      const [, uploadInit] = mockFetch.mock.calls[0];
-      expect((uploadInit?.headers as Record<string, string>)["X-Goog-Upload-File-Name"]).toBe(
-        "scan.png"
-      );
-      expect((uploadInit?.body as Buffer).toString()).toBe("bytes from disk");
-      expect(result.status).toBe("Success");
-    });
-
-    it("should use an explicit filename over the filePath basename when both are given", async () => {
-      mockUploadAndCreateSucceed();
-      const mockFetch = vi.mocked(fetch);
-      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from("bytes"));
-
-      await service.uploadMediaItem({
-        filePath: "/tmp/original-name.png",
-        filename: "custom-name.png",
-        mimeType: "image/png",
-      });
-
-      const [, uploadInit] = mockFetch.mock.calls[0];
-      expect((uploadInit?.headers as Record<string, string>)["X-Goog-Upload-File-Name"]).toBe(
-        "custom-name.png"
-      );
-    });
-
     it("should throw when using content without a filename", async () => {
       await expect(
         service.uploadMediaItem({ content: "ZmFrZQ==", mimeType: "image/jpeg" })
@@ -141,9 +103,8 @@ describe("PhotosService", () => {
     });
 
     it("should throw when neither content nor filePath is provided", async () => {
-      await expect(service.uploadMediaItem({ mimeType: "image/jpeg" })).rejects.toThrow(
-        "Either content or filePath must be provided"
-      );
+      await expect(service.uploadMediaItem({ mimeType: "image/jpeg" })).rejects.toThrow();
+      expect(vi.mocked(fetch)).not.toHaveBeenCalled();
     });
 
     it("should throw when the upload-bytes step fails", async () => {
@@ -207,6 +168,66 @@ describe("PhotosService", () => {
 
       expect(result.status).toBe("Failed to process the media item");
       expect(result.mediaItemId).toBeUndefined();
+    });
+  });
+
+  // filePath goes through resolveFileSource (see attachments.test.ts for the
+  // sandbox/symlink/size-cap coverage that lives there) — these exercise the
+  // integration, not the sandbox rules themselves.
+  describe("uploadMediaItem with filePath", () => {
+    let root: string;
+
+    beforeEach(() => {
+      root = mkdtempSync(join(tmpdir(), "gmcp-photos-"));
+      process.env.GOOGLE_MCP_FILE_ROOT = root;
+    });
+
+    afterEach(() => {
+      delete process.env.GOOGLE_MCP_FILE_ROOT;
+      rmSync(root, { recursive: true, force: true });
+    });
+
+    it("should read bytes from filePath and derive the filename from its basename", async () => {
+      mockUploadAndCreateSucceed();
+      const mockFetch = vi.mocked(fetch);
+      writeFileSync(join(root, "scan.png"), "bytes from disk");
+
+      const result = await service.uploadMediaItem({
+        filePath: "scan.png",
+        mimeType: "image/png",
+      });
+
+      const [, uploadInit] = mockFetch.mock.calls[0];
+      expect((uploadInit?.headers as Record<string, string>)["X-Goog-Upload-File-Name"]).toBe(
+        "scan.png"
+      );
+      expect((uploadInit?.body as Buffer).toString()).toBe("bytes from disk");
+      expect(result.status).toBe("Success");
+    });
+
+    it("should use an explicit filename over the filePath basename when both are given", async () => {
+      mockUploadAndCreateSucceed();
+      const mockFetch = vi.mocked(fetch);
+      writeFileSync(join(root, "original-name.png"), "bytes");
+
+      await service.uploadMediaItem({
+        filePath: "original-name.png",
+        filename: "custom-name.png",
+        mimeType: "image/png",
+      });
+
+      const [, uploadInit] = mockFetch.mock.calls[0];
+      expect((uploadInit?.headers as Record<string, string>)["X-Goog-Upload-File-Name"]).toBe(
+        "custom-name.png"
+      );
+    });
+
+    it("should reject a filePath that escapes the sandbox root", async () => {
+      await expect(
+        service.uploadMediaItem({ filePath: "../../etc/passwd", mimeType: "image/png" })
+      ).rejects.toThrow();
+
+      expect(vi.mocked(fetch)).not.toHaveBeenCalled();
     });
   });
 });
