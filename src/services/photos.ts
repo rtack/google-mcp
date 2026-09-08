@@ -37,8 +37,11 @@ export class PhotosService {
   // isn't persisted back to tokens.json (no listener is wired up for that
   // anywhere in this repo) - a pre-existing gap, not new.
   private async authHeaders(extra: Record<string, string>): Promise<Record<string, string>> {
+    // google-auth-library v10 returns a WHATWG Headers instance here, not a
+    // plain object — spreading it directly pulls in its methods instead of
+    // its entries, so convert explicitly first.
     const headers = await this.authClient.getRequestHeaders();
-    return { ...headers, ...extra };
+    return { ...Object.fromEntries(headers.entries()), ...extra };
   }
 
   // Photos Library API uploads happen in two steps: send the raw bytes to

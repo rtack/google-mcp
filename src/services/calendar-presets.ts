@@ -40,7 +40,8 @@ export function loadPresets(): CalendarPresets {
     throw new Error(
       `Failed to parse calendar presets file at ${PRESETS_PATH}: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
   }
 

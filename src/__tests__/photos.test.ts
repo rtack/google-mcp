@@ -15,7 +15,9 @@ describe("PhotosService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     service = new PhotosService(mockAuth);
-    mockGetRequestHeaders.mockResolvedValue({ Authorization: "Bearer test-token" });
+    // google-auth-library v10's real getRequestHeaders() returns a WHATWG
+    // Headers instance, not a plain object — mirror that here.
+    mockGetRequestHeaders.mockResolvedValue(new Headers({ Authorization: "Bearer test-token" }));
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -59,8 +61,11 @@ describe("PhotosService", () => {
       expect(uploadUrl).toBe("https://photoslibrary.googleapis.com/v1/uploads");
       expect(uploadInit).toMatchObject({
         method: "POST",
+        // WHATWG Headers lowercases names it stores — harmless for a real
+        // fetch() call (HTTP headers are case-insensitive) but the merged
+        // plain object reflects it, so match lowercase here.
         headers: expect.objectContaining({
-          Authorization: "Bearer test-token",
+          authorization: "Bearer test-token",
           "Content-Type": "application/octet-stream",
           "X-Goog-Upload-Content-Type": "image/jpeg",
           "X-Goog-Upload-Protocol": "raw",

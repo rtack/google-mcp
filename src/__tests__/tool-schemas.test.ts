@@ -6,6 +6,7 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 vi.mock("../auth/oauth.js", () => ({
   oauth: { isReady: () => false, getClient: () => null },
   GoogleOAuth: class {},
+  getConfigDir: () => "/tmp/google-mcp-test-config",
 }));
 
 import { GoogleWorkspaceMCPServer } from "../server.js";
