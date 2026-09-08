@@ -282,6 +282,7 @@ pass `savePath` for anything larger, up to 25 MB.
 | `gmail_search` | Search emails |
 | `gmail_get_unread` | Get unread emails |
 | `gmail_get_thread` | Get email thread |
+| `gmail_search_threads` | Search emails, one result per thread (built from the latest message) |
 
 ### Google Contacts
 | Tool | Description |

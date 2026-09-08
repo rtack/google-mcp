@@ -68,6 +68,16 @@ export interface GmailThread {
   messages?: GmailMessage[];
 }
 
+/**
+ * A thread search hit, built from the thread's LATEST message rather than
+ * whichever message matched the query — so subject/from/date/body/snippet
+ * reflect current state (e.g. a reply already sent) instead of stale first-
+ * message content. messageCount flags multi-message threads.
+ */
+export interface GmailThreadSearchResult extends GmailMessage {
+  messageCount: number;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -623,6 +633,32 @@ export class GmailService {
   public async searchEmails(query: string, maxResults = 20): Promise<GmailMessage[]> {
     const { messages } = await this.listMessages({ q: query, maxResults });
     return messages;
+  }
+
+  /**
+   * Thread-based search: one result per matching thread, built from that
+   * thread's most recent message. Use this over searchEmails when a stale
+   * matched-message snippet would be misleading — e.g. a thread you already
+   * replied to still matches "in:inbox" (the original message keeps the
+   * INBOX label), but searchEmails would surface the original ask with no
+   * sign a reply exists. searchThreads' snippet/body reflect the latest
+   * message instead, so an already-handled thread looks different from an
+   * open one at a glance.
+   */
+  public async searchThreads(query: string, maxResults = 20): Promise<GmailThreadSearchResult[]> {
+    const { threads } = await this.listThreads({ q: query, maxResults });
+
+    const results: GmailThreadSearchResult[] = [];
+    for (const stub of threads) {
+      if (!stub.id) continue;
+      const thread = await this.getThread(stub.id);
+      const messages = thread.messages || [];
+      const latest = messages[messages.length - 1];
+      if (!latest) continue;
+      results.push({ ...latest, messageCount: messages.length });
+    }
+
+    return results;
   }
 
   public async getUnreadEmails(maxResults = 20): Promise<GmailMessage[]> {

@@ -1166,6 +1166,40 @@ describe("GmailService", () => {
     });
   });
 
+  describe("searchThreads", () => {
+    it("should return one result per thread, built from the latest message", async () => {
+      mockThreadsList.mockResolvedValue({ data: { threads: [{ id: "t1" }] } });
+      mockThreadsGet.mockResolvedValue({
+        data: {
+          id: "t1",
+          messages: [
+            { id: "msg1", threadId: "t1", payload: { headers: [{ name: "Subject", value: "Original ask" }] } },
+            { id: "msg2", threadId: "t1", payload: { headers: [{ name: "Subject", value: "My reply" }] } },
+          ],
+        },
+      });
+
+      const result = await service.searchThreads("in:inbox");
+
+      expect(mockThreadsList).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "in:inbox" })
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("msg2");
+      expect(result[0].subject).toBe("My reply");
+      expect(result[0].messageCount).toBe(2);
+    });
+
+    it("should skip threads with no messages", async () => {
+      mockThreadsList.mockResolvedValue({ data: { threads: [{ id: "t1" }] } });
+      mockThreadsGet.mockResolvedValue({ data: { id: "t1", messages: [] } });
+
+      const result = await service.searchThreads("in:inbox");
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
   describe("getUnreadEmails", () => {
     it("should get unread emails", async () => {
       mockMessagesList.mockResolvedValue({ data: { messages: [{ id: "msg1" }] } });

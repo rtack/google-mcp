@@ -1557,6 +1557,24 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "gmail_search_threads",
+            description: "Search emails using Gmail search syntax, one result per matching thread instead of per message. Each result is built from the thread's most recent message (not necessarily the one that matched), so an already-replied-to thread shows the reply, not the stale original ask — includes messageCount so multi-message threads are visible. Prefer this over gmail_search when checking whether something still needs action.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "Gmail search query",
+                },
+                maxResults: {
+                  type: "number",
+                  description: "Maximum results (default: 20)",
+                },
+              },
+              required: ["query"],
+            },
+          },
+          {
             name: "gmail_get_unread",
             description: "Get unread emails.",
             inputSchema: {
@@ -4138,6 +4156,14 @@ export class GoogleWorkspaceMCPServer {
           const result = await this.requireGmail().searchEmails(query, maxResults || 20);
           return {
             content: [{ type: "text", text: untrustedEmailContent(result) }],
+          };
+        }
+
+        if (name === "gmail_search_threads") {
+          const { query, maxResults } = args as { query: string; maxResults?: number };
+          const result = await this.gmail!.searchThreads(query, maxResults || 20);
+          return {
+            content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
         }
 
