@@ -4772,7 +4772,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_send_draft") {
           const { draftId } = args as { draftId: string };
-          const result = await this.gmail!.sendDraft(draftId);
+          const result = await this.requireGmail().sendDraft(draftId);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
@@ -4780,7 +4780,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_delete_draft") {
           const { draftId } = args as { draftId: string };
-          await this.gmail!.deleteDraft(draftId);
+          await this.requireGmail().deleteDraft(draftId);
           return {
             content: [{ type: "text", text: `Draft ${draftId} deleted.` }],
           };
@@ -4844,7 +4844,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_search_threads") {
           const { query, maxResults } = args as { query: string; maxResults?: number };
-          const result = await this.gmail!.searchThreads(query, maxResults || 20);
+          const result = await this.requireGmail().searchThreads(query, maxResults || 20);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
@@ -4868,14 +4868,14 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_create_filter") {
           const { criteria, action } = GmailCreateFilterSchema.parse(args);
-          const result = await this.gmail!.createFilter(criteria, action);
+          const result = await this.requireGmail().createFilter(criteria, action);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
         }
 
         if (name === "gmail_list_filters") {
-          const result = await this.gmail!.listFilters();
+          const result = await this.requireGmail().listFilters();
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
@@ -4883,7 +4883,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_get_filter") {
           const { filterId } = args as { filterId: string };
-          const result = await this.gmail!.getFilter(filterId);
+          const result = await this.requireGmail().getFilter(filterId);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
@@ -4891,7 +4891,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_delete_filter") {
           const { filterId } = args as { filterId: string };
-          await this.gmail!.deleteFilter(filterId);
+          await this.requireGmail().deleteFilter(filterId);
           return {
             content: [{ type: "text", text: `Filter ${filterId} deleted.` }],
           };
