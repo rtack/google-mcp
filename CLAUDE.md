@@ -135,6 +135,19 @@ This doesn't replace the checklists above — it's how each line gets satisfied.
 
 **Don't propose the merge/PR itself until every item has evidence.** A turn that lists which items are met and which aren't is still gate-checking, not a proposal — never frame it as "this message is that request" while an item is still open. If an unmet item can be satisfied directly (e.g. running the live-verification call), do that first and then propose with full evidence. If it needs the owner's input, ask about that specific blocker on its own — not bundled with a merge request that isn't actually ready yet.
 
+## Sync With Upstream Before Starting Any Branch Work
+
+Before creating a new `feat/`/`fix/` branch (or resuming an existing one), check whether `upstream/main` has moved:
+
+```bash
+git fetch upstream main
+git log --oneline main..upstream/main   # anything printed means it moved
+```
+
+If it has: fast-forward local `main` to match (`git update-ref refs/heads/main refs/remotes/upstream/main` — `main` never carries local-only commits, so this is always safe), then rebase `local-dev` onto the updated `main` (`git rebase main` from `local-dev`), resolving any conflicts.
+
+Skipping this check let `local-dev` drift 39 commits behind `upstream/main` before it was noticed (2026-09-08), during which upstream independently merged fixes for the same bugs two of our own open PRs were still trying to fix (PR #21 superseded PR #10's nested-MIME-body fix; PR #23 superseded PR #14's attachment tools with a different, more complete design) — plus a from-scratch `gmail_send` attachment reimplementation that duplicated PR #23's already-merged, more secure version. Checking first is cheap; discovering the overlap after building on stale state is not.
+
 ## Worktree Isolation Required for All Work
 
 Multiple sessions can work on this repo concurrently. To prevent one session's uncommitted changes from silently landing in another session's shared checkout — as happened when an untracked `setCalendarSelected`/`selected` addition to `calendar.ts` appeared on `feat/calendar-create` without the session working that branch having made it — all work here must happen in an isolated git worktree, never directly in the shared checkout.
