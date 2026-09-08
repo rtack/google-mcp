@@ -4696,7 +4696,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_create_label") {
           const { name: labelName } = args as { name: string };
-          const result = await this.gmail!.createLabel(labelName);
+          const result = await this.requireGmail().createLabel(labelName);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           };
@@ -4704,7 +4704,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_delete_label") {
           const { labelId } = args as { labelId: string };
-          await this.gmail!.deleteLabel(labelId);
+          await this.requireGmail().deleteLabel(labelId);
           return {
             content: [{ type: "text", text: `Label ${labelId} deleted.` }],
           };
@@ -4804,7 +4804,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_add_labels") {
           const { messageId, labelIds } = args as { messageId: string; labelIds: string[] };
-          await this.gmail!.addLabels(messageId, labelIds);
+          await this.requireGmail().addLabels(messageId, labelIds);
           return {
             content: [{ type: "text", text: `Added labels [${labelIds.join(", ")}] to message ${messageId}.` }],
           };
@@ -4812,7 +4812,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_remove_labels") {
           const { messageId, labelIds } = args as { messageId: string; labelIds: string[] };
-          await this.gmail!.removeLabels(messageId, labelIds);
+          await this.requireGmail().removeLabels(messageId, labelIds);
           return {
             content: [{ type: "text", text: `Removed labels [${labelIds.join(", ")}] from message ${messageId}.` }],
           };
@@ -4820,7 +4820,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_add_thread_labels") {
           const { threadId, labelIds } = args as { threadId: string; labelIds: string[] };
-          await this.gmail!.addLabelsToThread(threadId, labelIds);
+          await this.requireGmail().addLabelsToThread(threadId, labelIds);
           return {
             content: [{ type: "text", text: `Added labels [${labelIds.join(", ")}] to thread ${threadId}.` }],
           };
@@ -4828,7 +4828,7 @@ export class GoogleWorkspaceMCPServer {
 
         if (name === "gmail_remove_thread_labels") {
           const { threadId, labelIds } = args as { threadId: string; labelIds: string[] };
-          await this.gmail!.removeLabelsFromThread(threadId, labelIds);
+          await this.requireGmail().removeLabelsFromThread(threadId, labelIds);
           return {
             content: [{ type: "text", text: `Removed labels [${labelIds.join(", ")}] from thread ${threadId}.` }],
           };
