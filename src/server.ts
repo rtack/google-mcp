@@ -1508,6 +1508,33 @@ export class GoogleWorkspaceMCPServer {
             },
           },
           {
+            name: "calendar_copy_event",
+            description: "Copy an event to another calendar, leaving the source event untouched. Local-dev-only convenience tool (no native Calendar API copy/duplicate primitive exists) — not part of the upstream PR surface.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                calendarId: {
+                  type: "string",
+                  description: "Calendar ID the event currently lives on (default: 'primary')",
+                },
+                eventId: {
+                  type: "string",
+                  description: "The ID of the event to copy",
+                },
+                destinationCalendarId: {
+                  type: "string",
+                  description: "Calendar ID to copy the event to",
+                },
+                sendUpdates: {
+                  type: "string",
+                  enum: ["all", "externalOnly", "none"],
+                  description: "Whether to send notifications",
+                },
+              },
+              required: ["eventId", "destinationCalendarId"],
+            },
+          },
+          {
             name: "calendar_quick_add",
             description: "Quickly add an event using natural language (e.g., 'Meeting with John tomorrow at 3pm').",
             inputSchema: {
@@ -4593,6 +4620,29 @@ export class GoogleWorkspaceMCPServer {
             destination,
             sendUpdates
           );
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "calendar_copy_event") {
+          const { calendarId, eventId, destinationCalendarId, sendUpdates } = args as {
+            calendarId?: string;
+            eventId: string;
+            destinationCalendarId: string;
+            sendUpdates?: "all" | "externalOnly" | "none";
+          };
+          const result = await this.requireCalendar().copyEvent({
+            calendarId,
+            eventId,
+            destinationCalendarId,
+            sendUpdates,
+          });
           return {
             content: [
               {

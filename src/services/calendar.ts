@@ -88,6 +88,13 @@ export interface EventCreateOptions {
   colorId?: string;
 }
 
+export interface EventCopyOptions {
+  calendarId?: string;
+  eventId: string;
+  destinationCalendarId: string;
+  sendUpdates?: "all" | "externalOnly" | "none";
+}
+
 export interface EventUpdateOptions {
   calendarId?: string;
   eventId: string;
@@ -472,6 +479,43 @@ export class CalendarService {
       eventId,
       destination,
       sendUpdates,
+    });
+
+    return this.formatEvent(response.data);
+  }
+
+  /**
+   * Copy an event to another calendar, leaving the source event untouched.
+   * The Calendar API has no native copy/duplicate primitive (moveEvent above
+   * transfers the same event, it doesn't duplicate it) — even Google's own
+   * "Duplicate" button in the Calendar web UI does exactly this under the
+   * hood: read the source event, insert those same field values elsewhere.
+   * Local-dev-only convenience tool, not a real Calendar API operation —
+   * not intended for the upstream PR.
+   */
+  public async copyEvent(options: EventCopyOptions): Promise<CalendarEvent> {
+    const sourceCalendarId = options.calendarId || "primary";
+
+    const source = await this.calendar.events.get({
+      calendarId: sourceCalendarId,
+      eventId: options.eventId,
+    });
+
+    const eventResource: calendar_v3.Schema$Event = {
+      summary: source.data.summary,
+      description: source.data.description,
+      location: source.data.location,
+      start: source.data.start,
+      end: source.data.end,
+      attendees: source.data.attendees,
+      recurrence: source.data.recurrence,
+      colorId: source.data.colorId,
+    };
+
+    const response = await this.calendar.events.insert({
+      calendarId: options.destinationCalendarId,
+      requestBody: eventResource,
+      sendUpdates: options.sendUpdates || "none",
     });
 
     return this.formatEvent(response.data);

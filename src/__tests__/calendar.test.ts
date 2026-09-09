@@ -693,6 +693,111 @@ describe("CalendarService", () => {
     });
   });
 
+  describe("copyEvent", () => {
+    it("should read the source event and insert its fields on the destination calendar", async () => {
+      mockEventsGet.mockResolvedValue({
+        data: {
+          id: "e1",
+          summary: "Party",
+          description: "Bring snacks",
+          location: "Friedhof Forum",
+          start: { dateTime: "2026-09-12T15:00:00+02:00" },
+          end: { dateTime: "2026-09-12T17:00:00+02:00" },
+          attendees: [{ email: "user@example.com" }],
+          recurrence: ["RRULE:FREQ=MONTHLY"],
+          colorId: "5",
+        },
+      });
+      mockEventsInsert.mockResolvedValue({
+        data: { id: "new", summary: "Party" },
+      });
+
+      const result = await service.copyEvent({
+        calendarId: "culture",
+        eventId: "e1",
+        destinationCalendarId: "paid",
+      });
+
+      expect(mockEventsGet).toHaveBeenCalledWith(
+        expect.objectContaining({ calendarId: "culture", eventId: "e1" })
+      );
+      expect(mockEventsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calendarId: "paid",
+          sendUpdates: "none",
+          requestBody: expect.objectContaining({
+            summary: "Party",
+            description: "Bring snacks",
+            location: "Friedhof Forum",
+            start: { dateTime: "2026-09-12T15:00:00+02:00" },
+            end: { dateTime: "2026-09-12T17:00:00+02:00" },
+            attendees: [{ email: "user@example.com" }],
+            recurrence: ["RRULE:FREQ=MONTHLY"],
+            colorId: "5",
+          }),
+        })
+      );
+      expect(result.id).toBe("new");
+    });
+
+    it("should default the source calendar to primary", async () => {
+      mockEventsGet.mockResolvedValue({
+        data: { id: "e1", summary: "Party" },
+      });
+      mockEventsInsert.mockResolvedValue({
+        data: { id: "new", summary: "Party" },
+      });
+
+      await service.copyEvent({ eventId: "e1", destinationCalendarId: "paid" });
+
+      expect(mockEventsGet).toHaveBeenCalledWith(
+        expect.objectContaining({ calendarId: "primary", eventId: "e1" })
+      );
+    });
+
+    it("should pass through sendUpdates", async () => {
+      mockEventsGet.mockResolvedValue({
+        data: { id: "e1", summary: "Party" },
+      });
+      mockEventsInsert.mockResolvedValue({
+        data: { id: "new", summary: "Party" },
+      });
+
+      await service.copyEvent({
+        eventId: "e1",
+        destinationCalendarId: "paid",
+        sendUpdates: "all",
+      });
+
+      expect(mockEventsInsert).toHaveBeenCalledWith(
+        expect.objectContaining({ sendUpdates: "all" })
+      );
+    });
+
+    it("should not carry the source event's own id/htmlLink/organizer over to the copy", async () => {
+      mockEventsGet.mockResolvedValue({
+        data: {
+          id: "e1",
+          summary: "Party",
+          htmlLink: "https://calendar.google.com/event?eid=e1",
+          organizer: { email: "source-calendar@group.calendar.google.com", self: true },
+          status: "confirmed",
+        },
+      });
+      mockEventsInsert.mockResolvedValue({
+        data: { id: "new", summary: "Party" },
+      });
+
+      await service.copyEvent({ eventId: "e1", destinationCalendarId: "paid" });
+
+      const requestBody = mockEventsInsert.mock.calls[0][0].requestBody;
+      expect(requestBody.id).toBeUndefined();
+      expect(requestBody.htmlLink).toBeUndefined();
+      expect(requestBody.organizer).toBeUndefined();
+      expect(requestBody.status).toBeUndefined();
+    });
+  });
+
   describe("quickAddEvent", () => {
     it("should quick add event", async () => {
       mockEventsQuickAdd.mockResolvedValue({
