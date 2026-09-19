@@ -2150,7 +2150,19 @@ export class GoogleWorkspaceMCPServer {
                 },
                 phone: {
                   type: "string",
-                  description: "Phone number",
+                  description: "Phone number. For a contact with more than one number, use `phones` instead.",
+                },
+                phones: {
+                  type: "array",
+                  description: "Multiple phone numbers. Takes precedence over `phone` if both are given.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      value: { type: "string", description: "Phone number" },
+                      type: { type: "string", description: "Type, e.g. mobile/home/work (default: mobile)" },
+                    },
+                    required: ["value"],
+                  },
                 },
                 organization: {
                   type: "string",
@@ -2192,7 +2204,19 @@ export class GoogleWorkspaceMCPServer {
                 },
                 phone: {
                   type: "string",
-                  description: "New phone number (replaces all existing phone numbers)",
+                  description: "New phone number (replaces ALL existing phone numbers with this one - if the contact has more than one number, use `phones` instead or the others will be lost).",
+                },
+                phones: {
+                  type: "array",
+                  description: "New phone numbers, replacing all existing ones. Use this for a contact with more than one number (e.g. mobile + home) - `phone` alone would drop everything but the one value given. Takes precedence over `phone` if both are given.",
+                  items: {
+                    type: "object",
+                    properties: {
+                      value: { type: "string", description: "Phone number" },
+                      type: { type: "string", description: "Type, e.g. mobile/home/work (default: mobile)" },
+                    },
+                    required: ["value"],
+                  },
                 },
                 organization: {
                   type: "string",
@@ -4977,11 +5001,12 @@ export class GoogleWorkspaceMCPServer {
         }
 
         if (name === "contacts_create") {
-          const { givenName, familyName, email, phone, organization, jobTitle, notes } = args as {
+          const { givenName, familyName, email, phone, phones, organization, jobTitle, notes } = args as {
             givenName: string;
             familyName?: string;
             email?: string;
             phone?: string;
+            phones?: Array<{ value: string; type?: string }>;
             organization?: string;
             jobTitle?: string;
             notes?: string;
@@ -4990,7 +5015,7 @@ export class GoogleWorkspaceMCPServer {
             givenName,
             familyName,
             emails: email ? [{ value: email }] : undefined,
-            phoneNumbers: phone ? [{ value: phone }] : undefined,
+            phoneNumbers: phones ?? (phone ? [{ value: phone }] : undefined),
             organization: organization || jobTitle ? { name: organization, title: jobTitle } : undefined,
             notes,
           });
@@ -5000,12 +5025,13 @@ export class GoogleWorkspaceMCPServer {
         }
 
         if (name === "contacts_update") {
-          const { resourceName, givenName, familyName, email, phone, organization, jobTitle, notes } = args as {
+          const { resourceName, givenName, familyName, email, phone, phones, organization, jobTitle, notes } = args as {
             resourceName: string;
             givenName?: string;
             familyName?: string;
             email?: string;
             phone?: string;
+            phones?: Array<{ value: string; type?: string }>;
             organization?: string;
             jobTitle?: string;
             notes?: string;
@@ -5023,7 +5049,7 @@ export class GoogleWorkspaceMCPServer {
             givenName,
             familyName,
             emails: email ? [{ value: email }] : undefined,
-            phoneNumbers: phone ? [{ value: phone }] : undefined,
+            phoneNumbers: phones ?? (phone ? [{ value: phone }] : undefined),
             organization: organization || jobTitle ? { name: organization, title: jobTitle } : undefined,
             notes,
           });
