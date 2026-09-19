@@ -34,6 +34,7 @@ import {
   SheetReadOptionsSchema,
   SheetUpdateOptionsSchema,
   SheetAppendOptionsSchema,
+  SheetFormatCellsOptionsSchema,
   TaskListCreateSchema,
   TaskCreateOptionsSchema,
   TaskUpdateOptionsSchema,
@@ -796,6 +797,66 @@ export class GoogleWorkspaceMCPServer {
                 },
               },
               required: ["spreadsheetId", "range", "values"],
+            },
+          },
+          {
+            name: "sheets_format_cells",
+            description: "Apply cell formatting (bold, italic, background color, text color) to a rectangular range in a sheet, via row/column indexes (0-based, end exclusive) rather than A1 notation.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                spreadsheetId: {
+                  type: "string",
+                  description: "The ID of the spreadsheet",
+                },
+                sheetId: {
+                  type: "number",
+                  description: "The numeric sheetId (gid) of the target sheet/tab — from sheets_get's sheets[].sheetId, not the sheet's title",
+                },
+                startRow: {
+                  type: "number",
+                  description: "0-based inclusive start row index",
+                },
+                endRow: {
+                  type: "number",
+                  description: "0-based exclusive end row index (e.g. startRow+1 for a single row)",
+                },
+                startCol: {
+                  type: "number",
+                  description: "0-based inclusive start column index",
+                },
+                endCol: {
+                  type: "number",
+                  description: "0-based exclusive end column index (e.g. startCol+1 for a single column)",
+                },
+                bold: {
+                  type: "boolean",
+                  description: "Set text bold on/off",
+                },
+                italic: {
+                  type: "boolean",
+                  description: "Set text italic on/off",
+                },
+                backgroundColor: {
+                  type: "object",
+                  description: "Cell background color, each channel 0-1 (e.g. {\"red\":0.7,\"green\":0.9,\"blue\":0.7} for a light green)",
+                  properties: {
+                    red: { type: "number" },
+                    green: { type: "number" },
+                    blue: { type: "number" },
+                  },
+                },
+                textColor: {
+                  type: "object",
+                  description: "Text color, each channel 0-1",
+                  properties: {
+                    red: { type: "number" },
+                    green: { type: "number" },
+                    blue: { type: "number" },
+                  },
+                },
+              },
+              required: ["spreadsheetId", "sheetId", "startRow", "endRow", "startCol", "endCol"],
             },
           },
           {
@@ -4042,6 +4103,35 @@ export class GoogleWorkspaceMCPServer {
               {
                 type: "text",
                 text: JSON.stringify(result, null, 2),
+              },
+            ],
+          };
+        }
+
+        if (name === "sheets_format_cells") {
+          const {
+            spreadsheetId,
+            sheetId,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+            bold,
+            italic,
+            backgroundColor,
+            textColor,
+          } = SheetFormatCellsOptionsSchema.parse(args);
+          await this.requireSheets().formatCells(spreadsheetId, sheetId, startRow, endRow, startCol, endCol, {
+            bold,
+            italic,
+            backgroundColor,
+            textColor,
+          });
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Formatted range (rows ${startRow}-${endRow}, cols ${startCol}-${endCol}) on sheet ${sheetId}.`,
               },
             ],
           };

@@ -210,6 +210,25 @@ export const SheetAppendOptionsSchema = z.object({
   valueInputOption: z.enum(["RAW", "USER_ENTERED"]).optional().default("USER_ENTERED"),
 });
 
+const SheetColorSchema = z.object({
+  red: z.number().min(0).max(1),
+  green: z.number().min(0).max(1),
+  blue: z.number().min(0).max(1),
+});
+
+export const SheetFormatCellsOptionsSchema = z.object({
+  spreadsheetId: z.string().min(1),
+  sheetId: z.number(),
+  startRow: z.number().int().min(0),
+  endRow: z.number().int().min(0),
+  startCol: z.number().int().min(0),
+  endCol: z.number().int().min(0),
+  bold: z.boolean().optional(),
+  italic: z.boolean().optional(),
+  backgroundColor: SheetColorSchema.optional(),
+  textColor: SheetColorSchema.optional(),
+});
+
 export const TaskListCreateSchema = z.object({
   title: z.string().min(1),
 });
