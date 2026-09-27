@@ -2225,6 +2225,21 @@ export class GoogleWorkspaceMCPServer {
                     required: ["value"],
                   },
                 },
+                addresses: {
+                  type: "array",
+                  description: "Postal addresses",
+                  items: {
+                    type: "object",
+                    properties: {
+                      streetAddress: { type: "string", description: "Street address" },
+                      city: { type: "string", description: "City" },
+                      region: { type: "string", description: "State/region" },
+                      postalCode: { type: "string", description: "Postal/ZIP code" },
+                      country: { type: "string", description: "Country" },
+                      type: { type: "string", description: "Type, e.g. home/work (default: home)" },
+                    },
+                  },
+                },
                 organization: {
                   type: "string",
                   description: "Company/organization name",
@@ -2277,6 +2292,21 @@ export class GoogleWorkspaceMCPServer {
                       type: { type: "string", description: "Type, e.g. mobile/home/work (default: mobile)" },
                     },
                     required: ["value"],
+                  },
+                },
+                addresses: {
+                  type: "array",
+                  description: "New postal addresses, replacing all existing ones",
+                  items: {
+                    type: "object",
+                    properties: {
+                      streetAddress: { type: "string", description: "Street address" },
+                      city: { type: "string", description: "City" },
+                      region: { type: "string", description: "State/region" },
+                      postalCode: { type: "string", description: "Postal/ZIP code" },
+                      country: { type: "string", description: "Country" },
+                      type: { type: "string", description: "Type, e.g. home/work (default: home)" },
+                    },
                   },
                 },
                 organization: {
@@ -5091,12 +5121,20 @@ export class GoogleWorkspaceMCPServer {
         }
 
         if (name === "contacts_create") {
-          const { givenName, familyName, email, phone, phones, organization, jobTitle, notes } = args as {
+          const { givenName, familyName, email, phone, phones, addresses, organization, jobTitle, notes } = args as {
             givenName: string;
             familyName?: string;
             email?: string;
             phone?: string;
             phones?: Array<{ value: string; type?: string }>;
+            addresses?: Array<{
+              streetAddress?: string;
+              city?: string;
+              region?: string;
+              postalCode?: string;
+              country?: string;
+              type?: string;
+            }>;
             organization?: string;
             jobTitle?: string;
             notes?: string;
@@ -5106,6 +5144,7 @@ export class GoogleWorkspaceMCPServer {
             familyName,
             emails: email ? [{ value: email }] : undefined,
             phoneNumbers: phones ?? (phone ? [{ value: phone }] : undefined),
+            addresses,
             organization: organization || jobTitle ? { name: organization, title: jobTitle } : undefined,
             notes,
           });
@@ -5115,13 +5154,21 @@ export class GoogleWorkspaceMCPServer {
         }
 
         if (name === "contacts_update") {
-          const { resourceName, givenName, familyName, email, phone, phones, organization, jobTitle, notes } = args as {
+          const { resourceName, givenName, familyName, email, phone, phones, addresses, organization, jobTitle, notes } = args as {
             resourceName: string;
             givenName?: string;
             familyName?: string;
             email?: string;
             phone?: string;
             phones?: Array<{ value: string; type?: string }>;
+            addresses?: Array<{
+              streetAddress?: string;
+              city?: string;
+              region?: string;
+              postalCode?: string;
+              country?: string;
+              type?: string;
+            }>;
             organization?: string;
             jobTitle?: string;
             notes?: string;
@@ -5140,6 +5187,7 @@ export class GoogleWorkspaceMCPServer {
             familyName,
             emails: email ? [{ value: email }] : undefined,
             phoneNumbers: phones ?? (phone ? [{ value: phone }] : undefined),
+            addresses,
             organization: organization || jobTitle ? { name: organization, title: jobTitle } : undefined,
             notes,
           });

@@ -36,11 +36,21 @@ export interface ContactGroup {
   groupType?: string;
 }
 
+export interface AddressInput {
+  streetAddress?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  type?: string;
+}
+
 export interface CreateContactOptions {
   givenName: string;
   familyName?: string;
   emails?: Array<{ value: string; type?: string }>;
   phoneNumbers?: Array<{ value: string; type?: string }>;
+  addresses?: AddressInput[];
   organization?: { name?: string; title?: string };
   notes?: string;
 }
@@ -52,6 +62,7 @@ export interface UpdateContactOptions {
   familyName?: string;
   emails?: Array<{ value: string; type?: string }>;
   phoneNumbers?: Array<{ value: string; type?: string }>;
+  addresses?: AddressInput[];
   organization?: { name?: string; title?: string };
   notes?: string;
 }
@@ -134,6 +145,17 @@ export class PeopleService {
       }));
     }
 
+    if (options.addresses) {
+      person.addresses = options.addresses.map((a) => ({
+        streetAddress: a.streetAddress,
+        city: a.city,
+        region: a.region,
+        postalCode: a.postalCode,
+        country: a.country,
+        type: a.type || "home",
+      }));
+    }
+
     if (options.organization) {
       person.organizations = [
         {
@@ -186,6 +208,18 @@ export class PeopleService {
         type: p.type || "mobile",
       }));
       updatePersonFields.push("phoneNumbers");
+    }
+
+    if (options.addresses) {
+      person.addresses = options.addresses.map((a) => ({
+        streetAddress: a.streetAddress,
+        city: a.city,
+        region: a.region,
+        postalCode: a.postalCode,
+        country: a.country,
+        type: a.type || "home",
+      }));
+      updatePersonFields.push("addresses");
     }
 
     if (options.organization) {
