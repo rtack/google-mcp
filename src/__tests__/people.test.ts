@@ -210,6 +210,46 @@ describe("PeopleService", () => {
       expect(mockPeopleCreateContact).toHaveBeenCalled();
       expect(result.resourceName).toBe("people/c456");
     });
+
+    it("should send addresses with a default type of home when creating a contact", async () => {
+      mockPeopleCreateContact.mockResolvedValue({
+        data: { resourceName: "people/c457", names: [{ displayName: "Ada Lovelace" }] },
+      });
+
+      await service.createContact({
+        givenName: "Ada",
+        familyName: "Lovelace",
+        addresses: [
+          { streetAddress: "1 Analytical Way", city: "London", postalCode: "E1 6AN", country: "UK" },
+        ],
+      });
+
+      const call = mockPeopleCreateContact.mock.calls[0][0];
+      expect(call.requestBody.addresses).toEqual([
+        {
+          streetAddress: "1 Analytical Way",
+          city: "London",
+          region: undefined,
+          postalCode: "E1 6AN",
+          country: "UK",
+          type: "home",
+        },
+      ]);
+    });
+
+    it("should respect an explicit address type when creating a contact", async () => {
+      mockPeopleCreateContact.mockResolvedValue({
+        data: { resourceName: "people/c458", names: [{ displayName: "Work Person" }] },
+      });
+
+      await service.createContact({
+        givenName: "Work",
+        addresses: [{ streetAddress: "1 Office Rd", type: "work" }],
+      });
+
+      const call = mockPeopleCreateContact.mock.calls[0][0];
+      expect(call.requestBody.addresses[0].type).toBe("work");
+    });
   });
 
   describe("updateContact", () => {
@@ -327,6 +367,39 @@ describe("PeopleService", () => {
       const call = mockPeopleUpdateContact.mock.calls[0][0];
       expect(call.updatePersonFields).toContain("emailAddresses");
       expect(call.updatePersonFields).toContain("phoneNumbers");
+    });
+
+    it("should replace addresses and include addresses in updatePersonFields when provided", async () => {
+      mockPeopleUpdateContact.mockResolvedValue({
+        data: { resourceName: "people/c123" },
+      });
+
+      await service.updateContact({
+        resourceName: "people/c123",
+        etag: "etag123",
+        addresses: [
+          {
+            streetAddress: "Hauptstraße 396",
+            city: "Weil am Rhein",
+            postalCode: "79576",
+            country: "Germany",
+            type: "home",
+          },
+        ],
+      });
+
+      const call = mockPeopleUpdateContact.mock.calls[0][0];
+      expect(call.requestBody.addresses).toEqual([
+        {
+          streetAddress: "Hauptstraße 396",
+          city: "Weil am Rhein",
+          region: undefined,
+          postalCode: "79576",
+          country: "Germany",
+          type: "home",
+        },
+      ]);
+      expect(call.updatePersonFields.split(",")).toContain("addresses");
     });
   });
 
